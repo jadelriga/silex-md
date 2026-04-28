@@ -59,7 +59,7 @@ Build this with integration tests **before** features on top.
 - [x] **3. Vault selection** — first-launch modal, native folder picker via Tauri dialog plugin, persist via Tauri store plugin
 - [x] **4. Rust commands** — `read_vault` (frontmatter only), `read_task_body`, `write_task` (atomic, returns hash), `move_task`, `delete_task`
 - [x] **5. Svelte stores** — `vaultStore`, `boardsStore`, `tasksStore`, `uiStore` (full), `writeHashStore`
-- [ ] **6. Sync loop + integration tests** — `watch_vault` Rust + hash-dedup + reconciliation. Don't progress until bulletproof.
+- [x] **6. Sync loop + integration tests** — `watch_vault` Rust + hash-dedup + reconciliation. Don't progress until bulletproof.
 - [ ] **7. Kanban board** — svelte-dnd-action, file moves on drop, fractional-indexing for order
 - [ ] **8. Task detail panel** — lazy body load, CodeMirror 6 editor, debounced autosave (300ms), dirty-state tracking, conflict banner
 - [ ] **9. Notes** — sidebar tree + full-area editor, same sync loop. Wikilinks/backlinks deferred to post-v1.
@@ -91,7 +91,7 @@ Cloud sync. Multi-user. Mobile app. App Store distribution. Plugin system. Recur
 
 ## Current status
 
-**Step 5 complete.** Ready for step 6.
+**Step 6 complete.** Ready for step 7.
 
 **What's wired up so far:**
 - Project scaffold builds and type-checks cleanly
@@ -109,25 +109,44 @@ Cloud sync. Multi-user. Mobile app. App Store distribution. Plugin system. Recur
   - `delete_task(path)` → file deletion.
 - Thin TS wrapper `src/lib/api/vault.ts` exporting `vaultApi.{readVault,readTaskBody,writeTask,moveTask,deleteTask}` and a `VaultEntry` type.
 - Demo `greet` command removed.
-- `tasksStore` at `src/lib/stores/tasks.svelte.ts` — `SvelteMap<path, VaultEntry>`, `loadFromVault(path)`, `upsert`, `remove`. Filters readVault output to `kind === "task"`.
+- `tasksStore` at `src/lib/stores/tasks.svelte.ts` — `SvelteMap<path, VaultEntry>`, `loadFromVault(path)`, `save(path, content)`, `upsert`, `remove`. `save()` writes via `vaultApi.writeTask`, registers the returned hash in `writeHashes`, then re-reads the entry to refresh local state.
 - `boardsStore` at `src/lib/stores/boards.svelte.ts` — `$derived` from `tasks.entries`. Returns `{ name, columns: string[] }[]`, alphabetically sorted (column ordering will need a board-config file later — currently just alphabetical).
-- `writeHashes` at `src/lib/stores/writeHashes.ts` (plain TS, not reactive) — `Map<path, hash>` for the sync-loop dedup. Methods: `set/get/matches/delete/clear`. Wired into write flow in step 6.
-- Layout effect: when `vault.path` is set, automatically calls `tasks.loadFromVault(vault.path)`. Sidebar now shows real boards from `boards.list` (with column count), or "Loading…" / "No boards yet" / error states.
+- `writeHashes` at `src/lib/stores/writeHashes.ts` (plain TS, not reactive) — `Map<path, hash>`. Set on every internal write; checked by the sync handler.
+- Layout effect: when `vault.path` is set, automatically calls `tasks.loadFromVault(vault.path)` and `vaultApi.watchVault(vault.path)`. Sidebar shows real boards from `boards.list` (with column count), or "Loading…" / "No boards yet" / error states.
+
+**Sync loop (step 6):**
+- Rust `watch_vault` command uses the `notify` crate. Watcher state is a `Mutex<Option<RecommendedWatcher>>` managed by Tauri; calling `watch_vault` again replaces the previous watcher.
+- For every `.md` file change, Rust emits a `vault:changed` event with `{ path, hash, kind }`. Hash is SHA-256 hex of the current file bytes (or `null` for `removed`).
+- Rust `read_entry(vaultPath, path)` returns one parsed `VaultEntry` so we can refresh a single file without rescanning the vault.
+- Frontend `src/lib/sync.ts` exports `handleVaultChange(event)` (testable) and `startSync()` (sets up the listener). On each event:
+  - `removed` → `tasks.remove(path)` and `writeHashes.delete(path)`
+  - `created`/`modified` with hash matching `writeHashes` → ignore (own write)
+  - `created`/`modified` with non-matching hash → `vaultApi.readEntry` then `tasks.upsert`
+- `startSync()` is called once on layout mount; `unlisten()` is returned from `onMount` to clean up.
+
+**Tests (step 6):**
+- Vitest configured at `vitest.config.ts` with `sveltekit()` plugin and `jsdom` env. Scripts: `npm test` (run once), `npm run test:watch` (watch).
+- `src/lib/sync.test.ts` — 9 tests covering: removed event, hash dedup, external refresh, created event, no-vault case, error swallowing, `tasks.save()` flow, and that a save-then-watcher-event round trip is correctly deduped.
+- `src-tauri/src/commands.rs` `#[cfg(test)] mod tests` — 4 tests: subtask counting (mixed list styles), hash determinism, path classification (task and note).
+- All 13 tests passing. Run with `npm test` and `cd src-tauri && cargo test`.
 
 **Files of note (current state):**
-- `src/routes/+layout.svelte` — app shell + vault load + tasks load effect + VaultSetup overlay + sidebar with real boards
+- `src/routes/+layout.svelte` — app shell + vault load + tasks load + watch_vault + startSync + sidebar with real boards
 - `src/routes/+page.svelte` — home placeholder, shows vault path
 - `src/lib/stores/ui.svelte.ts` — full UI store
 - `src/lib/stores/vault.svelte.ts` — vault store
-- `src/lib/stores/tasks.svelte.ts` — tasks store (`SvelteMap`)
+- `src/lib/stores/tasks.svelte.ts` — tasks store (`SvelteMap` + `save()`)
 - `src/lib/stores/boards.svelte.ts` — boards store (`$derived` from tasks)
 - `src/lib/stores/writeHashes.ts` — write-hash bookkeeping (non-reactive)
 - `src/lib/components/VaultSetup.svelte` — first-launch modal
-- `src/lib/api/vault.ts` — TS wrapper for the Rust commands + `VaultEntry` type
-- `src-tauri/Cargo.toml` — adds `walkdir`, `gray_matter`, `sha2`, `tempfile`
-- `src-tauri/src/commands.rs` — the 5 Rust commands
-- `src-tauri/src/lib.rs` — Tauri builder, plugin registration, `invoke_handler!` for the 5 commands
+- `src/lib/sync.ts` — `handleVaultChange()` + `startSync()`
+- `src/lib/sync.test.ts` — vitest tests
+- `src/lib/api/vault.ts` — TS wrapper for Rust commands + `VaultEntry` type
+- `src-tauri/Cargo.toml` — `walkdir`, `gray_matter`, `sha2`, `tempfile`, `notify`
+- `src-tauri/src/commands.rs` — 7 Rust commands + `WatcherState` + Rust unit tests
+- `src-tauri/src/lib.rs` — Tauri builder, plugin registration, managed `WatcherState`, `invoke_handler!`
 - `src-tauri/capabilities/default.json` — grants `dialog:default`, `store:default`, `opener:default`
+- `vitest.config.ts` — vitest config with sveltekit plugin and jsdom env
 
 **VaultEntry shape (TS side):**
 ```ts

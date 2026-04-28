@@ -5,17 +5,24 @@
   import { vault } from "$lib/stores/vault.svelte";
   import { tasks } from "$lib/stores/tasks.svelte";
   import { boards } from "$lib/stores/boards.svelte";
+  import { vaultApi } from "$lib/api/vault";
+  import { startSync } from "$lib/sync";
   import VaultSetup from "$lib/components/VaultSetup.svelte";
+  import type { UnlistenFn } from "@tauri-apps/api/event";
 
   let { children } = $props();
 
   onMount(() => {
     vault.load();
+    let unlisten: UnlistenFn | null = null;
+    startSync().then((u) => (unlisten = u));
+    return () => unlisten?.();
   });
 
   $effect(() => {
     if (vault.path) {
       tasks.loadFromVault(vault.path);
+      vaultApi.watchVault(vault.path).catch((e) => console.error("watch_vault failed", e));
     }
   });
 

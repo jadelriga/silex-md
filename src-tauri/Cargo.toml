@@ -28,4 +28,5 @@ walkdir = "2"
 gray_matter = "0.2"
 sha2 = "0.10"
 tempfile = "3"
+notify = "6"
 

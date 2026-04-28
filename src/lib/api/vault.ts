@@ -16,6 +16,9 @@ export const vaultApi = {
   readVault(path: string): Promise<VaultEntry[]> {
     return invoke("read_vault", { path });
   },
+  readEntry(vaultPath: string, path: string): Promise<VaultEntry | null> {
+    return invoke("read_entry", { vaultPath, path });
+  },
   readTaskBody(path: string): Promise<string> {
     return invoke("read_task_body", { path });
   },
@@ -27,5 +30,8 @@ export const vaultApi = {
   },
   deleteTask(path: string): Promise<void> {
     return invoke("delete_task", { path });
+  },
+  watchVault(path: string): Promise<void> {
+    return invoke("watch_vault", { path });
   },
 };
