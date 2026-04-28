@@ -2,6 +2,7 @@ import { SvelteMap } from "svelte/reactivity";
 import { vaultApi, type VaultEntry } from "$lib/api/vault";
 import { vault } from "$lib/stores/vault.svelte";
 import { writeHashes } from "$lib/stores/writeHashes";
+import { sha256Hex } from "$lib/utils/hash";
 
 class TasksStore {
   entries = new SvelteMap<string, VaultEntry>();
@@ -28,8 +29,9 @@ class TasksStore {
   }
 
   async save(path: string, content: string) {
-    const hash = await vaultApi.writeTask(path, content);
+    const hash = await sha256Hex(content);
     writeHashes.set(path, hash);
+    await vaultApi.writeTask(path, content);
     if (vault.path) {
       const entry = await vaultApi.readEntry(vault.path, path);
       if (entry) this.upsert(entry);

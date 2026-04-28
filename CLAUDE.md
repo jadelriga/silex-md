@@ -61,7 +61,7 @@ Build this with integration tests **before** features on top.
 - [x] **5. Svelte stores** — `vaultStore`, `boardsStore`, `tasksStore`, `uiStore` (full), `writeHashStore`
 - [x] **6. Sync loop + integration tests** — `watch_vault` Rust + hash-dedup + reconciliation. Don't progress until bulletproof.
 - [x] **7. Kanban board** — svelte-dnd-action, file moves on drop, fractional-indexing for order
-- [ ] **8. Task detail panel** — lazy body load, CodeMirror 6 editor, debounced autosave (300ms), dirty-state tracking, conflict banner
+- [x] **8. Task detail panel** — lazy body load, CodeMirror 6 editor, debounced autosave (300ms), dirty-state tracking, conflict banner
 - [ ] **9. Notes** — sidebar tree + full-area editor, same sync loop. Wikilinks/backlinks deferred to post-v1.
 - [ ] **10. Calendar view** — read-only over local due dates, behind `CalendarAdapter` interface
 - [ ] **11. Notifications** — Tauri plugin + 15-minute interval, configurable lead time
@@ -91,7 +91,22 @@ Cloud sync. Multi-user. Mobile app. App Store distribution. Plugin system. Recur
 
 ## Current status
 
-**Step 7 complete.** Ready for step 8.
+**Step 8 complete.** Ready for step 9.
+
+**Step 8 added:**
+- CodeMirror 6 packages: `codemirror`, `@codemirror/state`, `@codemirror/view`, `@codemirror/lang-markdown`, `@codemirror/theme-one-dark`.
+- `src/lib/components/CodeMirrorEditor.svelte` — wraps CM6 with markdown lang + one-dark theme + line wrapping. Plays nicely with parent-owned value (suppresses onChange when dispatching external value updates).
+- `src/lib/components/TaskDetailPanel.svelte` — fixed right-side panel (40rem). Lazy-loads body via `vaultApi.readTaskBody`. Inline-editable frontmatter (title, priority, due, estimate, comma-separated tags). 300ms debounced autosave through `tasks.save`, which registers the hash so the watcher echoes back as a no-op. Sets `frontmatter.updated` to today's date on every save. Flushes pending save on close.
+- `src/lib/stores/syncEvents.svelte.ts` — reactive `externalChange = { path, ts }` store. `sync.ts` updates it whenever an external (non-deduped) change is detected.
+- Conflict banner: when an external change for the open path arrives while the panel is dirty, an amber banner appears with "Reload" (re-read body + reset drafts) and "Keep mine" (dismiss banner; next save overwrites).
+- `Card.svelte` is now keyboard-accessible (role=button, tabindex, Enter/Space) and clicking opens the panel via `ui.openTaskPath`.
+- Layout: `Escape` closes the panel; `{#key ui.openTaskPath}` ensures the panel fully remounts when switching tasks.
+
+**Step 8 polish (post-feedback):**
+- Panel slides in/out via `transition:fly` on a wrapper (`x: 640, duration: 220, easing: quintOut`). The wrapper holds the fixed positioning; the panel itself is just `h-full w-[40rem]`. `{#key}` is inside the wrapper so switching cards doesn't re-trigger the slide animation.
+- Click outside the panel closes it. `src/lib/utils/clickOutside.ts` is a Svelte action that takes a `callback` and an optional `ignore` selector. Cards have `data-card`, so clicking another card swaps the panel content instead of closing.
+- Body shows as **rendered Markdown by default**, with an `edit` toggle in the header (or double-click / Enter to enter edit mode). Uses `marked` (gfm) + `@tailwindcss/typography` (`prose prose-invert`) for the rendered view; CodeMirror is only mounted when in edit mode. See "Markdown editor alternatives" further down for the rationale and future options.
+- Sync-loop fix: `tasks.save` now computes SHA-256 in JS via `src/lib/utils/hash.ts` and registers the hash in `writeHashes` **before** `vaultApi.writeTask`. This eliminates the race where the watcher fired before the hash was registered, which was producing false-positive "external change" banners on every in-app save. New test: `registers the hash before writing, so a racing watcher event still dedupes`.
 
 **Step 7 added:**
 - `svelte-dnd-action`, `fractional-indexing`, `js-yaml` (+ `@types/js-yaml`) installed.
@@ -185,12 +200,48 @@ Cloud sync. Multi-user. Mobile app. App Store distribution. Plugin system. Recur
 **Known leftover scaffolding to clean up later:**
 - `static/vite.svg`, `static/tauri.svg`, `static/svelte.svg` — demo assets, unreferenced
 - `tauri-plugin-opener` — scaffold default, currently unused; can be removed (Cargo.toml + lib.rs + capabilities)
-- macOS title bar still shows light system bar over dark UI — apply `titleBarStyle: "Overlay"` in `tauri.conf.json` later as polish
+- macOS title bar still shows light system bar over dark UI. Tried during step 8 polish, reverted because nothing landed cleanly:
+  - `"theme": "Dark"` on the window — no visible effect on macOS title bar (theme appears to be a Windows-mostly knob).
+  - `"titleBarStyle": "Overlay"` (+ `hiddenTitle: true`) — does remove the white bar, but the window becomes undraggable: neither `data-tauri-drag-region` nor an explicit `getCurrentWindow().startDragging()` mousedown handler made the sidebar header into a drag handle.
+  - Properly tackling this is part of step 15 (theming): full CSS-variable theme system + drag handle that survives an overlay title bar.
 
 **Polish queue (small targeted follow-ups, not blocking main steps):**
 - **Custom column order per board.** Currently columns render alphabetically (`backlog`, `done`, `in-progress`), which puts done before in-progress. Fix: introduce a per-board metadata file (e.g. `_silex.json` at `<vault>/boards/<board>/_silex.json`) holding `{ "columns": ["backlog", "in-progress", "done"] }`. Have `list_boards` read it; columns not in the file go after the listed ones, alphabetical. Falls back gracefully when the file is missing.
 - Add card / column / board UI affordances.
 - Delete card / column / board UI affordances.
+
+## Markdown editor alternatives
+
+Currently using **Option A** — a simple preview/edit toggle in `TaskDetailPanel`: rendered HTML by default (via `marked` + `@tailwindcss/typography`), CodeMirror 6 when in edit mode. Toggle button in the header; double-click or Enter on the preview also enters edit mode.
+
+This is a deliberate choice that prioritizes **byte-perfect Markdown round-tripping** over Notion-style WYSIWYG. The reasoning: if Claude Code (via the embedded terminal in step 12) or the user's external editor touches the same `.md` files, any reformatting on save would produce noisy diffs and cause the conflict-detection banner to fire constantly.
+
+If we ever revisit the editor experience, here are the three options on the table, in increasing cost:
+
+### Option A — Preview/edit toggle *(current)*
+- **Effort**: shipped.
+- **Pros**: Bytes preserved exactly. Zero risk of drift across the watcher / Claude Code / external editors. CodeMirror gives a real text editor when you need to edit syntax-heavy content.
+- **Cons**: Not Notion-like. Two modes, requires a deliberate switch. Editing feels slightly heavier than a "just type" experience.
+
+### Option B — Switch the editor to Milkdown + Crepe
+- **Effort**: 2–3 days.
+- **What it gets you**: A polished Notion-style editor essentially for free. Slash commands, inline rendering of Markdown as you type, tables, embeds. ProseMirror under the hood, so the document model is rich.
+- **Pros**: Best out-of-the-box UX of any option. Mature, maintained, used by other Markdown-as-database apps.
+- **Cons**: ProseMirror serializes a tree to Markdown on save — the round-trip is **not byte-perfect**. Concrete consequences for this project:
+  - `*foo*` may become `_foo_` (or vice-versa); trailing whitespace may shift; ordered list numbering may renumber.
+  - Every time Claude Code edits a file then we open it in the editor and save, we'd produce a diff even if no semantic change was made.
+  - The conflict banner would fire more often than it should.
+  - Mitigations exist (force a specific syntax style on Crepe's serializer, normalize bytes before comparing in `writeHashes`) but they don't fully eliminate the issue.
+- **When to pick this**: if user feedback is that "the editor feels clunky and that's the dealbreaker," and we accept that the embedded terminal / external-editor flow is a secondary use case.
+
+### Option C — Live-preview decorations on top of CodeMirror
+- **Effort**: 1–2+ weeks of dedicated extension authoring.
+- **What it gets you**: An Obsidian-style editor where Markdown syntax markers (`**`, `#`, `> `) are hidden when the cursor isn't on that line, and the line renders styled. This is what Obsidian does internally.
+- **Pros**: Bytes preserved. Notion-like feel for most content. Best of both worlds.
+- **Cons**: Each Markdown construct (headings, emphasis, lists, code blocks, links, blockquotes, task checkboxes, tables, fenced code with syntax highlighting) is its own CodeMirror extension with its own edge cases. Existing community packages (`@codemirror/lang-markdown` itself, `codemirror-rich-markdoc`, etc.) only cover a fraction of this. Obsidian has 5+ years of polish on theirs and still has rough edges.
+- **When to pick this**: only if the editor becomes the core differentiator we want to spend ongoing effort on. For a kanban app, this is almost certainly not worth it.
+
+**Decision rule going forward**: stick with Option A unless we get explicit, repeated feedback that the toggle is the thing standing in the way of using the app. If we do switch, jump straight to Option B; do not attempt Option C unless the editor is the product.
 
 **Not yet tested end-to-end:** the Rust commands compile cleanly but haven't been called from the UI yet. Step 5 (Svelte stores) is where they get exercised.
 

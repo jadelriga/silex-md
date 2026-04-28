@@ -4,6 +4,7 @@ import { tasks } from "$lib/stores/tasks.svelte";
 import { boards } from "$lib/stores/boards.svelte";
 import { writeHashes } from "$lib/stores/writeHashes";
 import { vault } from "$lib/stores/vault.svelte";
+import { syncEvents } from "$lib/stores/syncEvents.svelte";
 
 export type VaultChangeKind = "created" | "modified" | "removed";
 
@@ -33,6 +34,7 @@ export async function handleVaultChange(change: VaultChangeEvent): Promise<void>
     const entry = await vaultApi.readEntry(vault.path, path);
     if (entry) tasks.upsert(entry);
     boards.load(vault.path);
+    syncEvents.externalChange = { path, ts: Date.now() };
   } catch (e) {
     console.error("Failed to refresh entry", path, e);
   }

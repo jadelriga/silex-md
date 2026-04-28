@@ -1,5 +1,6 @@
 <script lang="ts">
   import type { VaultEntry } from "$lib/api/vault";
+  import { ui } from "$lib/stores/ui.svelte";
 
   let { entry }: { entry: VaultEntry } = $props();
 
@@ -10,10 +11,26 @@
   const title = $derived((fm.title as string | undefined) ?? fileName);
   const priority = $derived(fm.priority as string | undefined);
   const tags = $derived((fm.tags as string[] | undefined) ?? []);
+
+  function open() {
+    ui.openTaskPath = entry.path;
+  }
+
+  function onKey(e: KeyboardEvent) {
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      open();
+    }
+  }
 </script>
 
 <div
-  class="rounded border border-neutral-800 bg-neutral-800 p-3 text-sm hover:border-neutral-700 cursor-grab active:cursor-grabbing select-none"
+  role="button"
+  tabindex="0"
+  data-card
+  onclick={open}
+  onkeydown={onKey}
+  class="rounded border border-neutral-800 bg-neutral-800 p-3 text-sm hover:border-neutral-700 cursor-grab active:cursor-grabbing select-none focus:outline-none focus:ring-1 focus:ring-neutral-600"
 >
   <div class="font-medium text-neutral-100 break-words">{title}</div>
   {#if priority || tags.length > 0 || entry.subtaskTotal > 0}

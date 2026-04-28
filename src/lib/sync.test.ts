@@ -102,28 +102,43 @@ describe("handleVaultChange", () => {
 });
 
 describe("tasks.save", () => {
-  it("writes the file, registers the returned hash, and refreshes the entry", async () => {
-    const writeSpy = vi.spyOn(vaultApi, "writeTask").mockResolvedValue("hash-saved");
+  it("writes the file, registers a content hash, and refreshes the entry", async () => {
+    const writeSpy = vi.spyOn(vaultApi, "writeTask").mockResolvedValue("ignored");
     const refreshed = makeEntry({ frontmatter: { title: "saved" } });
     vi.spyOn(vaultApi, "readEntry").mockResolvedValue(refreshed);
 
     await tasks.save(TASK_PATH, "file content");
 
     expect(writeSpy).toHaveBeenCalledWith(TASK_PATH, "file content");
-    expect(writeHashes.get(TASK_PATH)).toBe("hash-saved");
+    expect(writeHashes.get(TASK_PATH)).toMatch(/^[a-f0-9]{64}$/);
     expect(tasks.entries.get(TASK_PATH)).toEqual(refreshed);
   });
 
-  it("registered hash from save() makes a subsequent watcher event a no-op", async () => {
-    vi.spyOn(vaultApi, "writeTask").mockResolvedValue("hash-saved");
+  it("registers the hash before writing, so a racing watcher event still dedupes", async () => {
+    let registeredHashAtWriteTime: string | undefined;
+    vi.spyOn(vaultApi, "writeTask").mockImplementation(async (path) => {
+      registeredHashAtWriteTime = writeHashes.get(path);
+      return "ignored";
+    });
     vi.spyOn(vaultApi, "readEntry").mockResolvedValue(makeEntry());
 
     await tasks.save(TASK_PATH, "file content");
 
+    expect(registeredHashAtWriteTime).toMatch(/^[a-f0-9]{64}$/);
+    expect(registeredHashAtWriteTime).toBe(writeHashes.get(TASK_PATH));
+  });
+
+  it("a watcher event with the registered hash is treated as a no-op", async () => {
+    vi.spyOn(vaultApi, "writeTask").mockResolvedValue("ignored");
+    vi.spyOn(vaultApi, "readEntry").mockResolvedValue(makeEntry());
+
+    await tasks.save(TASK_PATH, "file content");
+    const registered = writeHashes.get(TASK_PATH)!;
+
     const readEntry = vi.spyOn(vaultApi, "readEntry");
     readEntry.mockClear();
 
-    await handleVaultChange({ path: TASK_PATH, hash: "hash-saved", kind: "modified" });
+    await handleVaultChange({ path: TASK_PATH, hash: registered, kind: "modified" });
 
     expect(readEntry).not.toHaveBeenCalled();
   });

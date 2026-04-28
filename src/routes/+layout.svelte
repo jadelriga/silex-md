@@ -9,6 +9,9 @@
   import { vaultApi } from "$lib/api/vault";
   import { startSync } from "$lib/sync";
   import VaultSetup from "$lib/components/VaultSetup.svelte";
+  import TaskDetailPanel from "$lib/components/TaskDetailPanel.svelte";
+  import { fly } from "svelte/transition";
+  import { quintOut } from "svelte/easing";
   import type { UnlistenFn } from "@tauri-apps/api/event";
 
   const activeBoard = $derived(
@@ -39,6 +42,10 @@
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "j") {
         e.preventDefault();
         ui.terminalOpen = !ui.terminalOpen;
+        return;
+      }
+      if (e.key === "Escape" && ui.openTaskPath) {
+        ui.openTaskPath = null;
       }
     };
     window.addEventListener("keydown", handler);
@@ -111,4 +118,15 @@
 
 {#if vault.isLoaded && !vault.path}
   <VaultSetup />
+{/if}
+
+{#if ui.openTaskPath}
+  <div
+    class="fixed right-0 top-0 bottom-0 z-40"
+    transition:fly={{ x: 640, duration: 220, easing: quintOut }}
+  >
+    {#key ui.openTaskPath}
+      <TaskDetailPanel path={ui.openTaskPath} />
+    {/key}
+  </div>
 {/if}
