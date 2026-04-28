@@ -12,6 +12,11 @@ export interface VaultEntry {
   subtaskDone: number;
 }
 
+export interface BoardLayout {
+  name: string;
+  columns: string[];
+}
+
 export const vaultApi = {
   readVault(path: string): Promise<VaultEntry[]> {
     return invoke("read_vault", { path });
@@ -33,5 +38,8 @@ export const vaultApi = {
   },
   watchVault(path: string): Promise<void> {
     return invoke("watch_vault", { path });
+  },
+  listBoards(vaultPath: string): Promise<BoardLayout[]> {
+    return invoke("list_boards", { vaultPath });
   },
 };

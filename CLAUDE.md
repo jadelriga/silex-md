@@ -60,7 +60,7 @@ Build this with integration tests **before** features on top.
 - [x] **4. Rust commands** — `read_vault` (frontmatter only), `read_task_body`, `write_task` (atomic, returns hash), `move_task`, `delete_task`
 - [x] **5. Svelte stores** — `vaultStore`, `boardsStore`, `tasksStore`, `uiStore` (full), `writeHashStore`
 - [x] **6. Sync loop + integration tests** — `watch_vault` Rust + hash-dedup + reconciliation. Don't progress until bulletproof.
-- [ ] **7. Kanban board** — svelte-dnd-action, file moves on drop, fractional-indexing for order
+- [x] **7. Kanban board** — svelte-dnd-action, file moves on drop, fractional-indexing for order
 - [ ] **8. Task detail panel** — lazy body load, CodeMirror 6 editor, debounced autosave (300ms), dirty-state tracking, conflict banner
 - [ ] **9. Notes** — sidebar tree + full-area editor, same sync loop. Wikilinks/backlinks deferred to post-v1.
 - [ ] **10. Calendar view** — read-only over local due dates, behind `CalendarAdapter` interface
@@ -91,7 +91,30 @@ Cloud sync. Multi-user. Mobile app. App Store distribution. Plugin system. Recur
 
 ## Current status
 
-**Step 6 complete.** Ready for step 7.
+**Step 7 complete.** Ready for step 8.
+
+**Step 7 added:**
+- `svelte-dnd-action`, `fractional-indexing`, `js-yaml` (+ `@types/js-yaml`) installed.
+- `src/lib/utils/yaml.ts` — `buildTaskContent(frontmatter, body)` serializes frontmatter via `js-yaml` and assembles a full file.
+- `src/lib/utils/order.ts` — `compareOrder`, `getOrder`, `sortCards` (orders by `frontmatter.order`, then path).
+- Components in `src/lib/components/`:
+  - `Card.svelte` — title, optional priority pill, tags, subtask count
+  - `Column.svelte` — wraps a `dndzone`, emits `consider`/`finalize` callbacks
+  - `Board.svelte` — owns `columnsState` mirroring `tasks.entries` filtered by board; on finalize, computes neighbor-derived order via `generateKeyBetween` and either (a) writes only the moved card for same-column reorder, or (b) `moveTask` + `save` for cross-column moves.
+- Route: `src/routes/boards/[board]/+page.svelte` renders `<Board name={...} />`.
+- Layout: sidebar boards are now anchor links to `/boards/<encoded-name>`, with active-board highlight derived from `page.url.pathname`.
+- Tests: `src/lib/utils/order.test.ts` adds 7 tests covering compareOrder, sortCards (ordered + nullish), getOrder. Total: 16 JS tests + 4 Rust tests, all passing.
+
+**Step 7 follow-up (empty columns):**
+- New Rust command `list_boards(vaultPath)` walks `<vault>/boards/<board>/<column>/` and returns `BoardLayout[]` (board name + columns from directory listing, not file derivation).
+- `boards` store is now self-loading via `vaultApi.listBoards`, not `$derived` from tasks.
+- `Board.svelte` seeds `columnsState` from the layout first, then fills cards from `tasks.entries`. Empty columns persist as long as their directory exists.
+- Sync handler refreshes `boards` on each watcher event so external folder changes (Claude Code creating a new column dir, for example) appear in the UI.
+
+**Known step-7 limitations (deferred):**
+- No "add card / column / board" UI yet.
+- No "delete card / column / board" UI yet (filesystem ops would do it; no UI affordance).
+- Card click does nothing yet (detail panel is step 8).
 
 **What's wired up so far:**
 - Project scaffold builds and type-checks cleanly
@@ -163,6 +186,11 @@ Cloud sync. Multi-user. Mobile app. App Store distribution. Plugin system. Recur
 - `static/vite.svg`, `static/tauri.svg`, `static/svelte.svg` — demo assets, unreferenced
 - `tauri-plugin-opener` — scaffold default, currently unused; can be removed (Cargo.toml + lib.rs + capabilities)
 - macOS title bar still shows light system bar over dark UI — apply `titleBarStyle: "Overlay"` in `tauri.conf.json` later as polish
+
+**Polish queue (small targeted follow-ups, not blocking main steps):**
+- **Custom column order per board.** Currently columns render alphabetically (`backlog`, `done`, `in-progress`), which puts done before in-progress. Fix: introduce a per-board metadata file (e.g. `_silex.json` at `<vault>/boards/<board>/_silex.json`) holding `{ "columns": ["backlog", "in-progress", "done"] }`. Have `list_boards` read it; columns not in the file go after the listed ones, alphabetical. Falls back gracefully when the file is missing.
+- Add card / column / board UI affordances.
+- Delete card / column / board UI affordances.
 
 **Not yet tested end-to-end:** the Rust commands compile cleanly but haven't been called from the UI yet. Step 5 (Svelte stores) is where they get exercised.
 

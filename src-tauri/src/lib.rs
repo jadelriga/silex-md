@@ -1,8 +1,8 @@
 mod commands;
 
 use commands::{
-    delete_task, move_task, read_entry, read_task_body, read_vault, watch_vault, write_task,
-    WatcherState,
+    delete_task, list_boards, move_task, read_entry, read_task_body, read_vault, watch_vault,
+    write_task, WatcherState,
 };
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -20,6 +20,7 @@ pub fn run() {
             move_task,
             delete_task,
             watch_vault,
+            list_boards,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

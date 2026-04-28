@@ -1,22 +1,21 @@
-import { tasks } from "$lib/stores/tasks.svelte";
-
-export interface Board {
-  name: string;
-  columns: string[];
-}
+import { vaultApi, type BoardLayout } from "$lib/api/vault";
 
 class BoardsStore {
-  list = $derived.by<Board[]>(() => {
-    const map = new Map<string, Set<string>>();
-    for (const entry of tasks.entries.values()) {
-      if (!entry.board || !entry.column) continue;
-      if (!map.has(entry.board)) map.set(entry.board, new Set());
-      map.get(entry.board)!.add(entry.column);
+  list = $state<BoardLayout[]>([]);
+  isLoaded = $state(false);
+  error = $state<string | null>(null);
+
+  async load(vaultPath: string) {
+    try {
+      this.list = await vaultApi.listBoards(vaultPath);
+      this.error = null;
+    } catch (e) {
+      this.error = e instanceof Error ? e.message : String(e);
+      this.list = [];
+    } finally {
+      this.isLoaded = true;
     }
-    return Array.from(map.entries())
-      .map(([name, cols]) => ({ name, columns: Array.from(cols).sort() }))
-      .sort((a, b) => a.name.localeCompare(b.name));
-  });
+  }
 }
 
 export const boards = new BoardsStore();

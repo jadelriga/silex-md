@@ -1,6 +1,7 @@
 <script lang="ts">
   import "../app.css";
   import { onMount } from "svelte";
+  import { page } from "$app/state";
   import { ui } from "$lib/stores/ui.svelte";
   import { vault } from "$lib/stores/vault.svelte";
   import { tasks } from "$lib/stores/tasks.svelte";
@@ -9,6 +10,12 @@
   import { startSync } from "$lib/sync";
   import VaultSetup from "$lib/components/VaultSetup.svelte";
   import type { UnlistenFn } from "@tauri-apps/api/event";
+
+  const activeBoard = $derived(
+    page.url.pathname.startsWith("/boards/")
+      ? decodeURIComponent(page.url.pathname.slice("/boards/".length).split("/")[0])
+      : null,
+  );
 
   let { children } = $props();
 
@@ -22,6 +29,7 @@
   $effect(() => {
     if (vault.path) {
       tasks.loadFromVault(vault.path);
+      boards.load(vault.path);
       vaultApi.watchVault(vault.path).catch((e) => console.error("watch_vault failed", e));
     }
   });
@@ -65,10 +73,16 @@
           <div class="px-2 py-1 text-neutral-600 italic">No boards yet</div>
         {:else}
           {#each boards.list as board (board.name)}
-            <div class="px-2 py-1 text-neutral-300 truncate" title={board.name}>
+            <a
+              href="/boards/{encodeURIComponent(board.name)}"
+              class="block px-2 py-1 rounded truncate {activeBoard === board.name
+                ? 'bg-neutral-800 text-neutral-100'
+                : 'text-neutral-300 hover:bg-neutral-800/60'}"
+              title={board.name}
+            >
               {board.name}
               <span class="text-xs text-neutral-600">({board.columns.length})</span>
-            </div>
+            </a>
           {/each}
         {/if}
       </nav>

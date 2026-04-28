@@ -24,6 +24,12 @@ pub struct VaultEntry {
     pub subtask_done: usize,
 }
 
+#[derive(Serialize, Deserialize, Clone)]
+pub struct BoardLayout {
+    pub name: String,
+    pub columns: Vec<String>,
+}
+
 pub struct WatcherState {
     pub watcher: Mutex<Option<RecommendedWatcher>>,
 }
@@ -75,6 +81,42 @@ pub async fn read_vault(path: String) -> Result<Vec<VaultEntry>, String> {
 pub async fn read_entry(vault_path: String, path: String) -> Result<Option<VaultEntry>, String> {
     let boards_dir = PathBuf::from(&vault_path).join("boards");
     Ok(parse_entry(Path::new(&path), &boards_dir))
+}
+
+#[tauri::command]
+pub async fn list_boards(vault_path: String) -> Result<Vec<BoardLayout>, String> {
+    let boards_dir = PathBuf::from(&vault_path).join("boards");
+    if !boards_dir.is_dir() {
+        return Ok(Vec::new());
+    }
+
+    let mut layouts = Vec::new();
+    let board_dirs = match fs::read_dir(&boards_dir) {
+        Ok(it) => it,
+        Err(e) => return Err(e.to_string()),
+    };
+
+    for board_entry in board_dirs.flatten() {
+        if !board_entry.file_type().map(|t| t.is_dir()).unwrap_or(false) {
+            continue;
+        }
+        let board_name = board_entry.file_name().to_string_lossy().into_owned();
+        let mut columns = Vec::new();
+        if let Ok(col_dirs) = fs::read_dir(board_entry.path()) {
+            for col_entry in col_dirs.flatten() {
+                if col_entry.file_type().map(|t| t.is_dir()).unwrap_or(false) {
+                    columns.push(col_entry.file_name().to_string_lossy().into_owned());
+                }
+            }
+        }
+        columns.sort();
+        layouts.push(BoardLayout {
+            name: board_name,
+            columns,
+        });
+    }
+    layouts.sort_by(|a, b| a.name.cmp(&b.name));
+    Ok(layouts)
 }
 
 #[tauri::command]
