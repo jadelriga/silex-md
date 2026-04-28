@@ -57,7 +57,7 @@ Build this with integration tests **before** features on top.
 - [x] **1. Scaffold** — Tauri 2 + SvelteKit + Svelte 5 + TS + Vite + Tailwind v4
 - [x] **2. App shell** — sidebar + main area + hidden bottom terminal panel (`Cmd+J` toggles)
 - [x] **3. Vault selection** — first-launch modal, native folder picker via Tauri dialog plugin, persist via Tauri store plugin
-- [ ] **4. Rust commands** — `read_vault` (frontmatter only), `read_task_body`, `write_task` (atomic, returns hash), `move_task`, `delete_task`
+- [x] **4. Rust commands** — `read_vault` (frontmatter only), `read_task_body`, `write_task` (atomic, returns hash), `move_task`, `delete_task`
 - [ ] **5. Svelte stores** — `vaultStore`, `boardsStore`, `tasksStore`, `uiStore` (full), `writeHashStore`
 - [ ] **6. Sync loop + integration tests** — `watch_vault` Rust + hash-dedup + reconciliation. Don't progress until bulletproof.
 - [ ] **7. Kanban board** — svelte-dnd-action, file moves on drop, fractional-indexing for order
@@ -91,35 +91,54 @@ Cloud sync. Multi-user. Mobile app. App Store distribution. Plugin system. Recur
 
 ## Current status
 
-**Step 3 complete.** Ready for step 4.
+**Step 4 complete.** Ready for step 5.
 
 **What's wired up so far:**
 - Project scaffold builds and type-checks cleanly
 - App shell: sidebar (`w-60`, dark) with "Silex" header (shows vault basename when loaded), main content area, bottom terminal panel
 - Terminal panel hidden by default, `⌘ J` toggles it (Ctrl on non-Mac), close button in panel header. (Originally specced as `Cmd+\``, swapped to `Cmd+J` because backtick is awkward on non-US keyboards.)
 - Minimal `uiStore` at `src/lib/stores/ui.svelte.ts` with just `terminalOpen` (full store comes in step 5)
-- Tauri plugins added: `tauri-plugin-dialog` (folder picker), `tauri-plugin-store` (persistent prefs at `settings.json`)
+- Tauri plugins: `tauri-plugin-dialog`, `tauri-plugin-store`, `tauri-plugin-opener` (unused, scaffold default)
 - `vaultStore` at `src/lib/stores/vault.svelte.ts` with `path`, `isLoaded`, `load()`, `set()`, `clear()`
-- First-launch modal `src/lib/components/VaultSetup.svelte` shown when `isLoaded && !path` — native folder picker → persists path → dismisses modal
-- Once a vault is set, sidebar shows the folder basename and the home page shows the full path
+- First-launch modal `src/lib/components/VaultSetup.svelte` shown when `isLoaded && !path`
+- Rust commands in `src-tauri/src/commands.rs`:
+  - `read_vault(path)` → `Vec<VaultEntry>`. Walks the vault, skips `/templates`, classifies entries as `task` (under `/boards/<board>/<column>/<file>.md`) or `note` (any other `.md`). Returns frontmatter + subtask counts; **never** the body. Path is canonical for board/column.
+  - `read_task_body(path)` → body string (frontmatter stripped via `gray_matter`).
+  - `write_task(path, content)` → SHA-256 hex of bytes written. Atomic: temp file in same dir + `persist()` rename. Caller is responsible for full file content (frontmatter + body).
+  - `move_task(from, to)` → file rename, with copy-then-delete fallback for cross-device moves.
+  - `delete_task(path)` → file deletion.
+- Thin TS wrapper `src/lib/api/vault.ts` exporting `vaultApi.{readVault,readTaskBody,writeTask,moveTask,deleteTask}` and a `VaultEntry` type.
+- Demo `greet` command removed.
 
 **Files of note (current state):**
-- `src/routes/+layout.svelte` — app shell, global keydown listener, vault load on mount, conditional VaultSetup overlay
-- `src/routes/+page.svelte` — home placeholder, shows vault path when loaded
-- `src/routes/+layout.ts` — `ssr = false`
+- `src/routes/+layout.svelte` — app shell + vault load + VaultSetup overlay
+- `src/routes/+page.svelte` — home placeholder, shows vault path
 - `src/lib/stores/ui.svelte.ts` — UI store (`terminalOpen`)
-- `src/lib/stores/vault.svelte.ts` — vault store, persists via `@tauri-apps/plugin-store`
+- `src/lib/stores/vault.svelte.ts` — vault store
 - `src/lib/components/VaultSetup.svelte` — first-launch modal
-- `src/app.css` — `@import "tailwindcss";`
-- `vite.config.js` — `tailwindcss()` plugin registered
-- `src-tauri/src/lib.rs` — registers `tauri_plugin_store`, `tauri_plugin_dialog`, `tauri_plugin_opener`; still has demo `greet` command (will clean up in step 4)
+- `src/lib/api/vault.ts` — TS wrapper for the Rust commands + `VaultEntry` type
+- `src-tauri/Cargo.toml` — adds `walkdir`, `gray_matter`, `sha2`, `tempfile`
+- `src-tauri/src/commands.rs` — the 5 Rust commands
+- `src-tauri/src/lib.rs` — Tauri builder, plugin registration, `invoke_handler!` for the 5 commands
 - `src-tauri/capabilities/default.json` — grants `dialog:default`, `store:default`, `opener:default`
+
+**VaultEntry shape (TS side):**
+```ts
+{ path: string,
+  kind: "task" | "note",
+  board: string | null,
+  column: string | null,
+  frontmatter: Record<string, unknown> | null,
+  subtaskTotal: number,
+  subtaskDone: number }
+```
 
 **Known leftover scaffolding to clean up later:**
 - `static/vite.svg`, `static/tauri.svg`, `static/svelte.svg` — demo assets, unreferenced
-- `src-tauri/src/lib.rs` `greet` command — demo, unused
-- `tauri-plugin-opener` — auto-added by scaffold, currently unused; remove if we never need it
-- macOS title bar still shows light system bar over dark UI — apply `titleBarStyle: "Overlay"` (or similar) in `tauri.conf.json` later as polish
+- `tauri-plugin-opener` — scaffold default, currently unused; can be removed (Cargo.toml + lib.rs + capabilities)
+- macOS title bar still shows light system bar over dark UI — apply `titleBarStyle: "Overlay"` in `tauri.conf.json` later as polish
+
+**Not yet tested end-to-end:** the Rust commands compile cleanly but haven't been called from the UI yet. Step 5 (Svelte stores) is where they get exercised.
 
 ## Resuming a session
 
