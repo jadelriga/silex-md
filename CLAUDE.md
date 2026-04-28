@@ -58,7 +58,7 @@ Build this with integration tests **before** features on top.
 - [x] **2. App shell** — sidebar + main area + hidden bottom terminal panel (`Cmd+J` toggles)
 - [x] **3. Vault selection** — first-launch modal, native folder picker via Tauri dialog plugin, persist via Tauri store plugin
 - [x] **4. Rust commands** — `read_vault` (frontmatter only), `read_task_body`, `write_task` (atomic, returns hash), `move_task`, `delete_task`
-- [ ] **5. Svelte stores** — `vaultStore`, `boardsStore`, `tasksStore`, `uiStore` (full), `writeHashStore`
+- [x] **5. Svelte stores** — `vaultStore`, `boardsStore`, `tasksStore`, `uiStore` (full), `writeHashStore`
 - [ ] **6. Sync loop + integration tests** — `watch_vault` Rust + hash-dedup + reconciliation. Don't progress until bulletproof.
 - [ ] **7. Kanban board** — svelte-dnd-action, file moves on drop, fractional-indexing for order
 - [ ] **8. Task detail panel** — lazy body load, CodeMirror 6 editor, debounced autosave (300ms), dirty-state tracking, conflict banner
@@ -91,13 +91,13 @@ Cloud sync. Multi-user. Mobile app. App Store distribution. Plugin system. Recur
 
 ## Current status
 
-**Step 4 complete.** Ready for step 5.
+**Step 5 complete.** Ready for step 6.
 
 **What's wired up so far:**
 - Project scaffold builds and type-checks cleanly
 - App shell: sidebar (`w-60`, dark) with "Silex" header (shows vault basename when loaded), main content area, bottom terminal panel
 - Terminal panel hidden by default, `⌘ J` toggles it (Ctrl on non-Mac), close button in panel header. (Originally specced as `Cmd+\``, swapped to `Cmd+J` because backtick is awkward on non-US keyboards.)
-- Minimal `uiStore` at `src/lib/stores/ui.svelte.ts` with just `terminalOpen` (full store comes in step 5)
+- Full `uiStore` at `src/lib/stores/ui.svelte.ts` with `terminalOpen`, `activeBoard`, `openTaskPath`, `paletteOpen`, `searchOpen`
 - Tauri plugins: `tauri-plugin-dialog`, `tauri-plugin-store`, `tauri-plugin-opener` (unused, scaffold default)
 - `vaultStore` at `src/lib/stores/vault.svelte.ts` with `path`, `isLoaded`, `load()`, `set()`, `clear()`
 - First-launch modal `src/lib/components/VaultSetup.svelte` shown when `isLoaded && !path`
@@ -109,12 +109,19 @@ Cloud sync. Multi-user. Mobile app. App Store distribution. Plugin system. Recur
   - `delete_task(path)` → file deletion.
 - Thin TS wrapper `src/lib/api/vault.ts` exporting `vaultApi.{readVault,readTaskBody,writeTask,moveTask,deleteTask}` and a `VaultEntry` type.
 - Demo `greet` command removed.
+- `tasksStore` at `src/lib/stores/tasks.svelte.ts` — `SvelteMap<path, VaultEntry>`, `loadFromVault(path)`, `upsert`, `remove`. Filters readVault output to `kind === "task"`.
+- `boardsStore` at `src/lib/stores/boards.svelte.ts` — `$derived` from `tasks.entries`. Returns `{ name, columns: string[] }[]`, alphabetically sorted (column ordering will need a board-config file later — currently just alphabetical).
+- `writeHashes` at `src/lib/stores/writeHashes.ts` (plain TS, not reactive) — `Map<path, hash>` for the sync-loop dedup. Methods: `set/get/matches/delete/clear`. Wired into write flow in step 6.
+- Layout effect: when `vault.path` is set, automatically calls `tasks.loadFromVault(vault.path)`. Sidebar now shows real boards from `boards.list` (with column count), or "Loading…" / "No boards yet" / error states.
 
 **Files of note (current state):**
-- `src/routes/+layout.svelte` — app shell + vault load + VaultSetup overlay
+- `src/routes/+layout.svelte` — app shell + vault load + tasks load effect + VaultSetup overlay + sidebar with real boards
 - `src/routes/+page.svelte` — home placeholder, shows vault path
-- `src/lib/stores/ui.svelte.ts` — UI store (`terminalOpen`)
+- `src/lib/stores/ui.svelte.ts` — full UI store
 - `src/lib/stores/vault.svelte.ts` — vault store
+- `src/lib/stores/tasks.svelte.ts` — tasks store (`SvelteMap`)
+- `src/lib/stores/boards.svelte.ts` — boards store (`$derived` from tasks)
+- `src/lib/stores/writeHashes.ts` — write-hash bookkeeping (non-reactive)
 - `src/lib/components/VaultSetup.svelte` — first-launch modal
 - `src/lib/api/vault.ts` — TS wrapper for the Rust commands + `VaultEntry` type
 - `src-tauri/Cargo.toml` — adds `walkdir`, `gray_matter`, `sha2`, `tempfile`

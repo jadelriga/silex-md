@@ -3,12 +3,20 @@
   import { onMount } from "svelte";
   import { ui } from "$lib/stores/ui.svelte";
   import { vault } from "$lib/stores/vault.svelte";
+  import { tasks } from "$lib/stores/tasks.svelte";
+  import { boards } from "$lib/stores/boards.svelte";
   import VaultSetup from "$lib/components/VaultSetup.svelte";
 
   let { children } = $props();
 
   onMount(() => {
     vault.load();
+  });
+
+  $effect(() => {
+    if (vault.path) {
+      tasks.loadFromVault(vault.path);
+    }
   });
 
   $effect(() => {
@@ -40,10 +48,21 @@
       </div>
       <nav class="flex-1 overflow-y-auto p-2 text-sm">
         <div class="px-2 py-1 text-xs uppercase tracking-wide text-neutral-500">Boards</div>
-        {#if vault.path}
+        {#if !vault.path}
+          <div class="px-2 py-1 text-neutral-600 italic">No vault loaded</div>
+        {:else if !tasks.isLoaded}
+          <div class="px-2 py-1 text-neutral-600 italic">Loading…</div>
+        {:else if tasks.error}
+          <div class="px-2 py-1 text-red-400 text-xs">{tasks.error}</div>
+        {:else if boards.list.length === 0}
           <div class="px-2 py-1 text-neutral-600 italic">No boards yet</div>
         {:else}
-          <div class="px-2 py-1 text-neutral-600 italic">No vault loaded</div>
+          {#each boards.list as board (board.name)}
+            <div class="px-2 py-1 text-neutral-300 truncate" title={board.name}>
+              {board.name}
+              <span class="text-xs text-neutral-600">({board.columns.length})</span>
+            </div>
+          {/each}
         {/if}
       </nav>
     </aside>
