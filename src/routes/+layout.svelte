@@ -1,8 +1,15 @@
 <script lang="ts">
   import "../app.css";
+  import { onMount } from "svelte";
   import { ui } from "$lib/stores/ui.svelte";
+  import { vault } from "$lib/stores/vault.svelte";
+  import VaultSetup from "$lib/components/VaultSetup.svelte";
 
   let { children } = $props();
+
+  onMount(() => {
+    vault.load();
+  });
 
   $effect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -14,6 +21,10 @@
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
   });
+
+  function basename(p: string) {
+    return p.split("/").filter(Boolean).pop() ?? p;
+  }
 </script>
 
 <div class="flex flex-col h-screen w-screen overflow-hidden bg-neutral-950 text-neutral-100">
@@ -21,10 +32,19 @@
     <aside class="w-60 shrink-0 border-r border-neutral-800 bg-neutral-900 flex flex-col">
       <div class="px-4 py-3 border-b border-neutral-800">
         <h1 class="text-sm font-semibold tracking-wide">Silex</h1>
+        {#if vault.path}
+          <p class="mt-0.5 text-xs text-neutral-500 truncate" title={vault.path}>
+            {basename(vault.path)}
+          </p>
+        {/if}
       </div>
       <nav class="flex-1 overflow-y-auto p-2 text-sm">
         <div class="px-2 py-1 text-xs uppercase tracking-wide text-neutral-500">Boards</div>
-        <div class="px-2 py-1 text-neutral-600 italic">No vault loaded</div>
+        {#if vault.path}
+          <div class="px-2 py-1 text-neutral-600 italic">No boards yet</div>
+        {:else}
+          <div class="px-2 py-1 text-neutral-600 italic">No vault loaded</div>
+        {/if}
       </nav>
     </aside>
     <main class="flex-1 overflow-auto">
@@ -48,3 +68,7 @@
     </section>
   {/if}
 </div>
+
+{#if vault.isLoaded && !vault.path}
+  <VaultSetup />
+{/if}
