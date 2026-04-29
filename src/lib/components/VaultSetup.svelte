@@ -25,17 +25,17 @@
   }
 </script>
 
-<div class="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm">
-  <div class="w-[28rem] rounded-lg border border-neutral-800 bg-neutral-900 p-6 shadow-2xl">
-    <h2 class="text-lg font-semibold text-neutral-100">Welcome to Silex</h2>
-    <p class="mt-2 text-sm leading-relaxed text-neutral-400">
+<div class="fixed inset-0 z-50 flex items-center justify-center bg-backdrop backdrop-blur-sm">
+  <div class="w-[28rem] rounded-lg border border-border bg-surface-1 p-6 shadow-2xl">
+    <h2 class="text-lg font-semibold text-fg">Welcome to Silex</h2>
+    <p class="mt-2 text-sm leading-relaxed text-fg-muted">
       Choose a folder to use as your vault. All your boards and notes will live there as
       Markdown files. You can change this later from settings.
     </p>
     <button
       onclick={chooseVault}
       disabled={busy}
-      class="mt-5 w-full rounded-md bg-neutral-100 px-4 py-2 text-sm font-medium text-neutral-900 transition-colors hover:bg-white disabled:cursor-not-allowed disabled:opacity-50"
+      class="mt-5 w-full rounded-md bg-accent px-4 py-2 text-sm font-medium text-accent-fg transition-colors hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-50"
     >
       {busy ? "Opening folder picker…" : "Choose vault folder"}
     </button>

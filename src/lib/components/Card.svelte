@@ -30,21 +30,21 @@
   data-card
   onclick={open}
   onkeydown={onKey}
-  class="rounded border border-neutral-800 bg-neutral-800 p-3 text-sm hover:border-neutral-700 cursor-grab active:cursor-grabbing select-none focus:outline-none focus:ring-1 focus:ring-neutral-600"
+  class="rounded border border-border bg-surface-2 p-3 text-sm hover:border-border-strong cursor-grab active:cursor-grabbing select-none focus:outline-none focus:ring-1 focus:ring-fg-faint"
 >
-  <div class="font-medium text-neutral-100 break-words">{title}</div>
+  <div class="font-medium text-fg break-words">{title}</div>
   {#if priority || tags.length > 0 || entry.subtaskTotal > 0}
     <div class="mt-2 flex flex-wrap gap-x-2 gap-y-1 text-xs items-center">
       {#if priority}
-        <span class="px-1.5 py-0.5 rounded bg-neutral-700 text-neutral-200">
+        <span class="px-1.5 py-0.5 rounded bg-surface-3 text-fg">
           {priority}
         </span>
       {/if}
       {#each tags as tag}
-        <span class="text-neutral-500">#{tag}</span>
+        <span class="text-fg-subtle">#{tag}</span>
       {/each}
       {#if entry.subtaskTotal > 0}
-        <span class="text-neutral-500">
+        <span class="text-fg-subtle">
           {entry.subtaskDone}/{entry.subtaskTotal}
         </span>
       {/if}

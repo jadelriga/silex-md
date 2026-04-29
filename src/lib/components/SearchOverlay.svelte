@@ -80,24 +80,24 @@
   <!-- svelte-ignore a11y_click_events_have_key_events -->
   <!-- svelte-ignore a11y_no_static_element_interactions -->
   <div
-    class="fixed inset-0 z-50 flex items-start justify-center pt-[10vh] bg-black/60 backdrop-blur-sm"
+    class="fixed inset-0 z-50 flex items-start justify-center pt-[10vh] bg-backdrop backdrop-blur-sm"
     onclick={(e) => {
       if (e.target === e.currentTarget) close();
     }}
   >
     <div
-      class="w-[48rem] max-w-[92vw] rounded-lg border border-neutral-800 bg-neutral-900 shadow-2xl overflow-hidden"
+      class="w-[48rem] max-w-[92vw] rounded-lg border border-border bg-surface-1 shadow-2xl overflow-hidden"
     >
       <input
         bind:this={inputEl}
         bind:value={query}
         onkeydown={onKeydown}
         placeholder="Search across titles, frontmatter, and bodies…"
-        class="w-full bg-transparent px-4 py-3 text-sm text-neutral-100 outline-none border-b border-neutral-800 placeholder:text-neutral-600"
+        class="w-full bg-transparent px-4 py-3 text-sm text-fg outline-none border-b border-border placeholder:text-fg-faint"
       />
       <div class="max-h-[60vh] overflow-y-auto py-1">
         {#if !query.trim()}
-          <div class="px-4 py-3 text-sm text-neutral-500 italic">
+          <div class="px-4 py-3 text-sm text-fg-subtle italic">
             {#if bodies.isLoading}
               Indexing bodies…
             {:else if !bodies.isLoaded}
@@ -107,7 +107,7 @@
             {/if}
           </div>
         {:else if hits.length === 0}
-          <div class="px-4 py-3 text-sm text-neutral-500 italic">
+          <div class="px-4 py-3 text-sm text-fg-subtle italic">
             {bodies.isLoading ? "Still indexing…" : "No matches."}
           </div>
         {:else}
@@ -122,18 +122,18 @@
                   }}
                   onmouseenter={() => (selectedIndex = i)}
                   class="w-full text-left px-4 py-2 flex flex-col gap-0.5 {i === selectedIndex
-                    ? 'bg-neutral-800'
-                    : 'hover:bg-neutral-800/60'}"
+                    ? 'bg-surface-2'
+                    : 'hover:bg-surface-2/60'}"
                 >
                   <div class="flex items-center gap-3 text-sm">
                     <span class="text-xs uppercase tracking-wide w-12 shrink-0 {kindColor[hit.kind]}">
                       {hit.kind}
                     </span>
-                    <span class="flex-1 truncate text-neutral-100">{hit.title}</span>
-                    <span class="text-xs text-neutral-500 truncate max-w-[40%]">{hit.hint}</span>
+                    <span class="flex-1 truncate text-fg">{hit.title}</span>
+                    <span class="text-xs text-fg-subtle truncate max-w-[40%]">{hit.hint}</span>
                   </div>
                   {#if hit.snippet}
-                    <div class="pl-[3.75rem] text-xs text-neutral-500 truncate">
+                    <div class="pl-[3.75rem] text-xs text-fg-subtle truncate">
                       {hit.snippet}
                     </div>
                   {/if}

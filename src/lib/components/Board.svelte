@@ -90,7 +90,7 @@
     />
   {/each}
   {#if columnNames.length === 0}
-    <div class="flex h-full items-center justify-center text-neutral-500 w-full">
+    <div class="flex h-full items-center justify-center text-fg-subtle w-full">
       <p>This board has no columns yet.</p>
     </div>
   {/if}

@@ -98,4 +98,4 @@
   });
 </script>
 
-<div bind:this={container} class="h-full w-full bg-black"></div>
+<div bind:this={container} class="h-full w-full bg-surface-deep"></div>

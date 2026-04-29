@@ -117,19 +117,19 @@
   }
 </script>
 
-<div class="h-full flex flex-col bg-neutral-950">
+<div class="h-full flex flex-col bg-surface">
   {#if !entry}
-    <div class="p-6 text-neutral-500">Note not found at {path}.</div>
+    <div class="p-6 text-fg-subtle">Note not found at {path}.</div>
   {:else}
     {#if externalChangeWhileDirty}
       <div
-        class="px-6 py-2 bg-amber-900/30 border-b border-amber-800/60 text-sm text-amber-200 flex items-center justify-between"
+        class="px-6 py-2 bg-warn-bg border-b border-warn-border text-sm text-warn-fg flex items-center justify-between"
       >
         <span>File changed on disk while you were editing.</span>
         <span class="space-x-3 text-xs">
-          <button class="underline hover:text-amber-100" onclick={loadFromDisk}>Reload</button>
+          <button class="underline hover:text-fg" onclick={loadFromDisk}>Reload</button>
           <button
-            class="underline hover:text-amber-100"
+            class="underline hover:text-fg"
             onclick={() => (externalChangeWhileDirty = false)}
           >
             Keep mine
@@ -142,20 +142,20 @@
       <input
         bind:value={titleDraft}
         oninput={onTitleChange}
-        class="flex-1 bg-transparent text-2xl font-light text-neutral-100 outline-none placeholder:text-neutral-600"
+        class="flex-1 bg-transparent text-2xl font-light text-fg outline-none placeholder:text-fg-faint"
         placeholder={fileName}
       />
-      <div class="flex items-center gap-3 text-xs text-neutral-500">
+      <div class="flex items-center gap-3 text-xs text-fg-subtle">
         {#if saving}
           <span>saving…</span>
         {:else if dirty}
-          <span class="text-neutral-400">unsaved</span>
+          <span class="text-fg-muted">unsaved</span>
         {:else if bodyLoaded}
           <span>saved</span>
         {/if}
         <button
           onclick={() => (editMode = !editMode)}
-          class="text-neutral-400 hover:text-neutral-100"
+          class="text-fg-muted hover:text-fg"
         >
           {editMode ? "preview" : "edit"}
         </button>
@@ -168,7 +168,7 @@
 
     <div class="flex-1 min-h-0 overflow-auto">
       {#if !bodyLoaded}
-        <div class="p-6 text-neutral-500 text-sm">Loading…</div>
+        <div class="p-6 text-fg-subtle text-sm">Loading…</div>
       {:else if editMode}
         <CodeMirrorEditor value={bodyDraft} onChange={onBodyChange} />
       {:else}
@@ -186,7 +186,7 @@
           title="Double-click or press Enter to edit"
         >
           {#if bodyDraft.trim() === ""}
-            <div class="px-6 py-4 text-neutral-600 italic select-none">
+            <div class="px-6 py-4 text-fg-faint italic select-none">
               Empty. Double-click or press Enter to start writing.
             </div>
           {:else}

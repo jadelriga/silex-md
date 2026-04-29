@@ -68,7 +68,24 @@ Build this with integration tests **before** features on top.
 - [x] **12. Embedded terminal** — portable-pty + xterm.js (real PTY required, not piped stdio)
 - [x] **13. Command palette** — `Cmd+P`, custom Svelte component
 - [x] **14. Search overlay** — `Cmd+Shift+F`, full-text across title + frontmatter + body (scope expanded from "frontmatter + title only" per user preference)
-- [ ] **15. Theming + keyboard shortcuts** — incremental throughout; CSS variables for theme swap
+- [x] **15. Theming + keyboard shortcuts** — CSS-variable theme system, system/light/dark with manual override, polish-queue items folded in
+
+### Step 15 plan (so we don't lose it across iterations)
+
+1. **CSS variable theme foundation.** Define semantic tokens (surface, surface-1/2/3/deep; fg, fg-muted/subtle/faint; border, border-strong; warn-bg/border/fg; backdrop) in `app.css` via Tailwind v4's `@theme` block. Default values match the current dark UI; a `.theme-light` selector overrides for the light variant.
+2. **Refactor layout, sidebar, vault-setup, and main panels** to use the new tokens (`bg-surface-1`, `text-fg-muted`, etc.) — visual result identical to today, but every color comes from a variable.
+3. **Refactor leaf components**: Card, Column, Board, TaskDetailPanel, NotesTree, NoteView, CommandPalette, SearchOverlay, Terminal, MarkdownPreview, Calendar.
+4. **Light-theme color review.** Once everything's on tokens, set sensible light values, eyeball each surface, fix anything that doesn't translate (priority pills, calendar's `.ec-dark`, CodeMirror's `oneDark` → swap to a light theme when `theme-light` is active).
+5. **Polish-queue items that fit.** Mutual exclusion between palette and search, persist terminal panel height in the Tauri store, restore `tauri.conf.json` window theme to `null` (auto/system).
+6. **Theme switcher.** Detection via `prefers-color-scheme`, manual override stored as `themePref: "system" | "light" | "dark"` via the Tauri store plugin, applied to the document root. Three command-palette actions: "Theme: Use system / Light / Dark".
+
+Steps 1–3 are this iteration; user reviews; then 4–6 in the next.
+
+**Deferred from step 15** (handled separately, not in this step):
+- `Cmd+N` "new task" and similar creation shortcuts — needs a creation flow, which doesn't exist yet.
+- Arrow-key navigation between cards on the board — non-trivial focus model with svelte-dnd-action; do as a dedicated keyboard-nav pass.
+- Custom column ordering (the `_silex.json` per-board metadata file) — already on the polish queue, separate concern.
+- Highlight matched terms in search snippets — cosmetic.
 
 ## Key decisions (and why)
 
@@ -91,7 +108,28 @@ Cloud sync. Multi-user. Mobile app. App Store distribution. Plugin system. Recur
 
 ## Current status
 
-**Step 14 complete.** Ready for step 15.
+**Step 15 (and the last numbered step) complete.** Implementation order is finished. Polish queue and follow-ups remain.
+
+**Step 15 — iteration 1 (theme variable foundation):**
+- `app.css` defines semantic tokens via Tailwind v4's `@theme` block: `surface`, `surface-1/2/3/deep`, `fg`, `fg-muted/subtle/faint`, `border`, `border-strong`, `warn-bg/border/fg`, `accent` / `accent-fg` / `accent-hover`, `backdrop`. Default values match the existing dark UI; `.theme-light` overrides them with the light variant.
+- All Svelte components (`Card`, `Column`, `Board`, `NotesTree`, `NoteView`, `TaskDetailPanel`, `CommandPalette`, `SearchOverlay`, `Terminal`, `MarkdownPreview`, `Calendar`, `VaultSetup`) plus `+layout.svelte`, `+page.svelte`, and `notes/[...path]/+page.svelte` migrated to the new tokens — no hardcoded `bg-neutral-*` / `text-neutral-*` / `border-neutral-*` / `bg-black` remain in app code (greppable).
+- Calendar's CSS overrides moved to `var(--color-…)` so light values flow through.
+
+**Step 15 — iteration 2 (light theme + switcher + polish):**
+- `src/lib/stores/theme.svelte.ts` — `themeStore` with `pref: "system" | "light" | "dark"`, derived `effective: "light" | "dark"`, persists via Tauri store plugin (`themePref` key in `settings.json`). `load()` reads the saved pref and listens to `prefers-color-scheme: dark` changes for live system-preference updates. `applyToDocument()` toggles `.theme-light` on `documentElement` and calls `getCurrentWindow().setTheme(effective)` so the macOS title-bar chrome matches.
+- Layout effect on `theme.effective` calls `applyToDocument()` whenever the resolved theme changes.
+- Three command-palette actions: "Theme: Use system", "Theme: Light", "Theme: Dark". Optional `setThemePref` source on `PaletteSources`; tests cover the new actions and that they're omitted when not provided.
+- `MarkdownPreview` toggles `prose-invert` based on `theme.effective`. Light theme falls back to default `prose`.
+- `CodeMirrorEditor` only loads `oneDark` when effective is dark; light mode uses CodeMirror's default light styling. Note: theme is read at editor mount time — switching themes mid-session doesn't recolor an open editor; reopening the panel/note picks up the new theme.
+- `Calendar.svelte` conditionally applies `.ec-dark` based on `theme.effective`, so EC's built-in light styling kicks in for light mode.
+- `src/lib/stores/settings.svelte.ts` — small generic settings store. Currently just `terminalHeight` (persisted via the same `settings.json`); restored on layout mount, saved on resize end. Default 240px when unset.
+- Mutual exclusion of overlays in the layout's keydown handler: opening the palette closes search, opening search closes the palette. Double-tapping the same shortcut still closes its own overlay.
+
+**Notes for future iteration on theme polish:**
+- Tauri's `getCurrentWindow().setTheme()` behaviour on macOS depends on the OS version — on older macOS it may not redraw the title bar until the window is hidden/shown again. Acceptable for v1.
+- Light-theme visual sweep: the values in `.theme-light` are sensible defaults but probably need eyeball passes (especially priority pills, kind pills, focus rings, the conflict banner) once you actually use light mode for a while.
+- CodeMirror live-theme switching while an editor is mounted would need a separate Compartment for the theme extension and a `view.dispatch({ effects: themeCompartment.reconfigure(newTheme) })` call. Easy to add when desired.
+- The Tauri store plugin call from `theme.applyToDocument()` (`getCurrentWindow().setTheme()`) is a fire-and-forget Promise — errors logged but not surfaced to the user.
 
 **Step 14 added:**
 - New Rust command `read_bodies(vaultPath)` walks the vault and returns `HashMap<path, body>` for every `.md` file outside `/templates`. The body is the post-frontmatter content extracted via `gray_matter`.

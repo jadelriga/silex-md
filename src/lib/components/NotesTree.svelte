@@ -31,7 +31,7 @@
     <button
       type="button"
       onclick={() => toggle(node.relativePath)}
-      class="w-full text-left px-2 py-0.5 rounded text-neutral-400 hover:bg-neutral-800/60 truncate flex items-center gap-1"
+      class="w-full text-left px-2 py-0.5 rounded text-fg-muted hover:bg-surface-2/60 truncate flex items-center gap-1"
       style="padding-left: {0.5 + depth * 0.75}rem"
     >
       <svg
@@ -42,7 +42,7 @@
         stroke-linecap="round"
         stroke-linejoin="round"
         aria-hidden="true"
-        class="w-4 h-4 shrink-0 text-neutral-400 transition-transform {expanded.has(
+        class="w-4 h-4 shrink-0 text-fg-muted transition-transform {expanded.has(
           node.relativePath,
         )
           ? 'rotate-90'
@@ -59,8 +59,8 @@
     <a
       href={noteHref(node.relativePath)}
       class="block px-2 py-0.5 rounded truncate {activeRelativePath === node.relativePath
-        ? 'bg-neutral-800 text-neutral-100'
-        : 'text-neutral-300 hover:bg-neutral-800/60'}"
+        ? 'bg-surface-2 text-fg'
+        : 'text-fg hover:bg-surface-2/60'}"
       style="padding-left: {0.5 + (depth + 1) * 0.75}rem"
       title={node.relativePath}
     >

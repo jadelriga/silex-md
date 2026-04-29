@@ -1,5 +1,6 @@
 <script lang="ts">
   import { Marked } from "marked";
+  import { theme } from "$lib/stores/theme.svelte";
 
   let {
     source,
@@ -47,7 +48,10 @@
 
 <!-- svelte-ignore a11y_click_events_have_key_events -->
 <!-- svelte-ignore a11y_no_static_element_interactions -->
-<div class="prose prose-invert prose-sm max-w-none p-4" onclick={handleClick}>
+<div
+  class="prose prose-sm max-w-none p-4 {theme.effective === 'dark' ? 'prose-invert' : ''}"
+  onclick={handleClick}
+>
   {@html html}
 </div>
 
@@ -55,6 +59,6 @@
   div :global(input[type="checkbox"]) {
     cursor: pointer;
     margin-right: 0.4em;
-    accent-color: rgb(115 115 115);
+    accent-color: var(--color-fg-subtle);
   }
 </style>

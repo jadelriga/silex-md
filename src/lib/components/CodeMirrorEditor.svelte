@@ -6,6 +6,7 @@
   import { syntaxHighlighting, defaultHighlightStyle } from "@codemirror/language";
   import { markdown } from "@codemirror/lang-markdown";
   import { oneDark } from "@codemirror/theme-one-dark";
+  import { theme } from "$lib/stores/theme.svelte";
 
   let {
     value,
@@ -20,25 +21,25 @@
   let suppressOnChange = false;
 
   onMount(() => {
-    view = new EditorView({
-      state: EditorState.create({
-        doc: value,
-        extensions: [
-          history(),
-          drawSelection(),
-          highlightActiveLine(),
-          syntaxHighlighting(defaultHighlightStyle),
-          keymap.of([...defaultKeymap, ...historyKeymap]),
-          markdown(),
-          oneDark,
-          EditorView.lineWrapping,
-          EditorView.updateListener.of((u) => {
-            if (u.docChanged && !suppressOnChange) {
-              onChange?.(u.state.doc.toString());
-            }
-          }),
-        ],
+    const extensions = [
+      history(),
+      drawSelection(),
+      highlightActiveLine(),
+      syntaxHighlighting(defaultHighlightStyle),
+      keymap.of([...defaultKeymap, ...historyKeymap]),
+      markdown(),
+      EditorView.lineWrapping,
+      EditorView.updateListener.of((u) => {
+        if (u.docChanged && !suppressOnChange) {
+          onChange?.(u.state.doc.toString());
+        }
       }),
+    ];
+    if (theme.effective === "dark") {
+      extensions.push(oneDark);
+    }
+    view = new EditorView({
+      state: EditorState.create({ doc: value, extensions }),
       parent: container,
     });
   });

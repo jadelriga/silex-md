@@ -147,37 +147,37 @@
 
 <aside
   use:clickOutside={{ callback: close, ignore: "[data-card]" }}
-  class="h-full w-[40rem] max-w-full bg-neutral-900 border-l border-neutral-800 flex flex-col shadow-2xl"
+  class="h-full w-[40rem] max-w-full bg-surface-1 border-l border-border flex flex-col shadow-2xl"
 >
   <header
-    class="flex items-center justify-between px-4 py-2 border-b border-neutral-800 text-xs text-neutral-500"
+    class="flex items-center justify-between px-4 py-2 border-b border-border text-xs text-fg-subtle"
   >
     <span class="truncate" title={path}>{path}</span>
     <div class="flex items-center gap-3">
       <button
         onclick={() => (editMode = !editMode)}
-        class="text-neutral-400 hover:text-neutral-100"
+        class="text-fg-muted hover:text-fg"
       >
         {editMode ? "preview" : "edit"}
       </button>
-      <button onclick={close} class="text-neutral-400 hover:text-neutral-100" aria-label="Close">
+      <button onclick={close} class="text-fg-muted hover:text-fg" aria-label="Close">
         close
       </button>
     </div>
   </header>
 
   {#if !entry}
-    <div class="p-4 text-neutral-500">Task not found.</div>
+    <div class="p-4 text-fg-subtle">Task not found.</div>
   {:else}
     {#if externalChangeWhileDirty}
       <div
-        class="px-4 py-2 bg-amber-900/30 border-b border-amber-800/60 text-sm text-amber-200 flex items-center justify-between"
+        class="px-4 py-2 bg-warn-bg border-b border-warn-border text-sm text-warn-fg flex items-center justify-between"
       >
         <span>File changed on disk while you were editing.</span>
         <span class="space-x-3 text-xs">
-          <button class="underline hover:text-amber-100" onclick={loadFromDisk}>Reload</button>
+          <button class="underline hover:text-fg" onclick={loadFromDisk}>Reload</button>
           <button
-            class="underline hover:text-amber-100"
+            class="underline hover:text-fg"
             onclick={() => (externalChangeWhileDirty = false)}
           >
             Keep mine
@@ -186,11 +186,11 @@
       </div>
     {/if}
 
-    <div class="px-4 py-3 space-y-2 border-b border-neutral-800">
+    <div class="px-4 py-3 space-y-2 border-b border-border">
       <input
         bind:value={titleDraft}
         oninput={onFieldChange}
-        class="w-full bg-transparent text-lg font-medium text-neutral-100 outline-none placeholder:text-neutral-600"
+        class="w-full bg-transparent text-lg font-medium text-fg outline-none placeholder:text-fg-faint"
         placeholder="Title"
       />
 
@@ -198,7 +198,7 @@
         <select
           bind:value={priorityDraft}
           onchange={onFieldChange}
-          class="bg-neutral-800 border border-neutral-700 rounded px-2 py-1 text-neutral-200"
+          class="bg-surface-2 border border-border-strong rounded px-2 py-1 text-fg"
         >
           <option value="">priority…</option>
           <option value="low">low</option>
@@ -210,29 +210,29 @@
           bind:value={dueDraft}
           oninput={onFieldChange}
           type="date"
-          class="bg-neutral-800 border border-neutral-700 rounded px-2 py-1 text-neutral-200"
+          class="bg-surface-2 border border-border-strong rounded px-2 py-1 text-fg"
         />
 
         <input
           bind:value={estimateDraft}
           oninput={onFieldChange}
           placeholder="estimate"
-          class="bg-neutral-800 border border-neutral-700 rounded px-2 py-1 text-neutral-200 w-28"
+          class="bg-surface-2 border border-border-strong rounded px-2 py-1 text-fg w-28"
         />
       </div>
 
       <input
         bind:value={tagsDraft}
         oninput={onFieldChange}
-        class="w-full bg-neutral-800 border border-neutral-700 rounded px-2 py-1 text-sm text-neutral-200"
+        class="w-full bg-surface-2 border border-border-strong rounded px-2 py-1 text-sm text-fg"
         placeholder="tags (comma-separated)"
       />
 
-      <div class="text-xs text-neutral-500 flex items-center gap-3">
+      <div class="text-xs text-fg-subtle flex items-center gap-3">
         {#if saving}
           <span>saving…</span>
         {:else if dirty}
-          <span class="text-neutral-400">unsaved changes</span>
+          <span class="text-fg-muted">unsaved changes</span>
         {:else if bodyLoaded}
           <span>saved</span>
         {/if}
@@ -247,7 +247,7 @@
 
     <div class="flex-1 min-h-0 overflow-auto">
       {#if !bodyLoaded}
-        <div class="p-4 text-neutral-500 text-sm">Loading…</div>
+        <div class="p-4 text-fg-subtle text-sm">Loading…</div>
       {:else if editMode}
         <CodeMirrorEditor value={bodyDraft} onChange={onBodyChange} />
       {:else}
@@ -265,7 +265,7 @@
           title="Double-click or press Enter to edit"
         >
           {#if bodyDraft.trim() === ""}
-            <div class="p-4 text-neutral-600 italic select-none">
+            <div class="p-4 text-fg-faint italic select-none">
               Empty. Double-click or press Enter to start writing.
             </div>
           {:else}

@@ -15,5 +15,5 @@
 {#if fullPath}
   <NoteView path={fullPath} />
 {:else}
-  <div class="p-6 text-neutral-500">No note selected.</div>
+  <div class="p-6 text-fg-subtle">No note selected.</div>
 {/if}

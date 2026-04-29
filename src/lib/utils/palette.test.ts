@@ -94,6 +94,27 @@ describe("buildPaletteItems", () => {
     items.find((i) => i.kind === "task")?.run();
     expect(openTask).toHaveBeenCalledWith("/v/boards/b/c/t.md");
   });
+
+  it("emits theme switch actions when setThemePref is provided", () => {
+    const setThemePref = vi.fn();
+    const items = buildPaletteItems(makeSources({ setThemePref }));
+    const ids = items.map((i) => i.id);
+    expect(ids).toEqual(
+      expect.arrayContaining(["action:theme-system", "action:theme-light", "action:theme-dark"]),
+    );
+  });
+
+  it("omits theme actions when setThemePref is not provided", () => {
+    const items = buildPaletteItems(makeSources({}));
+    expect(items.find((i) => i.id === "action:theme-light")).toBeUndefined();
+  });
+
+  it("running a theme action calls setThemePref with the right value", () => {
+    const setThemePref = vi.fn();
+    const items = buildPaletteItems(makeSources({ setThemePref }));
+    items.find((i) => i.id === "action:theme-light")?.run();
+    expect(setThemePref).toHaveBeenCalledWith("light");
+  });
 });
 
 describe("filterPaletteItems", () => {

@@ -20,6 +20,7 @@ export interface PaletteSources {
   goto: (href: string) => void;
   openTask: (path: string) => void;
   toggleTerminal: () => void;
+  setThemePref?: (pref: "system" | "light" | "dark") => void;
 }
 
 export function buildPaletteItems(s: PaletteSources): PaletteItem[] {
@@ -41,6 +42,31 @@ export function buildPaletteItems(s: PaletteSources): PaletteItem[] {
     search: "toggle terminal panel action",
     run: () => s.toggleTerminal(),
   });
+
+  if (s.setThemePref) {
+    const setThemePref = s.setThemePref;
+    items.push({
+      id: "action:theme-system",
+      kind: "action",
+      label: "Theme: Use system",
+      search: "theme system action",
+      run: () => setThemePref("system"),
+    });
+    items.push({
+      id: "action:theme-light",
+      kind: "action",
+      label: "Theme: Light",
+      search: "theme light action",
+      run: () => setThemePref("light"),
+    });
+    items.push({
+      id: "action:theme-dark",
+      kind: "action",
+      label: "Theme: Dark",
+      search: "theme dark action",
+      run: () => setThemePref("dark"),
+    });
+  }
 
   for (const board of s.boards) {
     items.push({

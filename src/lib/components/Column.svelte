@@ -18,10 +18,10 @@
   } = $props();
 </script>
 
-<div class="flex flex-col w-72 shrink-0 bg-neutral-900 rounded-md border border-neutral-800 max-h-full">
-  <div class="px-3 py-2 border-b border-neutral-800 text-sm font-medium text-neutral-300 flex items-center justify-between">
+<div class="flex flex-col w-72 shrink-0 bg-surface-1 rounded-md border border-border max-h-full">
+  <div class="px-3 py-2 border-b border-border text-sm font-medium text-fg flex items-center justify-between">
     <span>{name}</span>
-    <span class="text-xs text-neutral-500">{items.length}</span>
+    <span class="text-xs text-fg-subtle">{items.length}</span>
   </div>
   <div
     class="flex-1 p-2 space-y-2 overflow-y-auto min-h-[100px]"

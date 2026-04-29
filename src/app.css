@@ -2,6 +2,60 @@
 @plugin "@tailwindcss/typography";
 @import "@event-calendar/core/index.css";
 
+/* Theme tokens. Default block matches the existing dark UI; .theme-light
+   overrides for the light variant once we wire the toggle in step 15.6. */
+@theme {
+  --color-surface: rgb(10 10 10);
+  --color-surface-1: rgb(23 23 23);
+  --color-surface-2: rgb(38 38 38);
+  --color-surface-3: rgb(64 64 64);
+  --color-surface-deep: rgb(0 0 0);
+
+  --color-fg: rgb(245 245 245);
+  --color-fg-muted: rgb(163 163 163);
+  --color-fg-subtle: rgb(115 115 115);
+  --color-fg-faint: rgb(82 82 82);
+
+  --color-border: rgb(38 38 38);
+  --color-border-strong: rgb(64 64 64);
+
+  --color-warn-bg: rgb(120 53 15 / 0.3);
+  --color-warn-border: rgb(146 64 14 / 0.6);
+  --color-warn-fg: rgb(254 215 170);
+
+  --color-accent: rgb(245 245 245);
+  --color-accent-fg: rgb(23 23 23);
+  --color-accent-hover: rgb(255 255 255);
+
+  --color-backdrop: rgb(0 0 0 / 0.6);
+}
+
+.theme-light {
+  --color-surface: rgb(250 250 250);
+  --color-surface-1: rgb(241 241 241);
+  --color-surface-2: rgb(232 232 232);
+  --color-surface-3: rgb(218 218 218);
+  --color-surface-deep: rgb(255 255 255);
+
+  --color-fg: rgb(23 23 23);
+  --color-fg-muted: rgb(82 82 82);
+  --color-fg-subtle: rgb(115 115 115);
+  --color-fg-faint: rgb(163 163 163);
+
+  --color-border: rgb(220 220 220);
+  --color-border-strong: rgb(180 180 180);
+
+  --color-warn-bg: rgb(254 243 199);
+  --color-warn-border: rgb(252 211 77);
+  --color-warn-fg: rgb(120 53 15);
+
+  --color-accent: rgb(23 23 23);
+  --color-accent-fg: rgb(245 245 245);
+  --color-accent-hover: rgb(0 0 0);
+
+  --color-backdrop: rgb(0 0 0 / 0.35);
+}
+
 @layer base {
   button:not(:disabled) {
     cursor: pointer;
