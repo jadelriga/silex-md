@@ -1,6 +1,6 @@
 <script lang="ts">
   import "../app.css";
-  import { onMount } from "svelte";
+  import { onMount, untrack } from "svelte";
   import { page } from "$app/state";
   import { ui } from "$lib/stores/ui.svelte";
   import { vault } from "$lib/stores/vault.svelte";
@@ -9,6 +9,7 @@
   import { notes } from "$lib/stores/notes.svelte";
   import { vaultApi } from "$lib/api/vault";
   import { startSync } from "$lib/sync";
+  import { startScheduler, stopScheduler, runCheckNow } from "$lib/scheduler";
   import VaultSetup from "$lib/components/VaultSetup.svelte";
   import TaskDetailPanel from "$lib/components/TaskDetailPanel.svelte";
   import NotesTree from "$lib/components/NotesTree.svelte";
@@ -30,7 +31,10 @@
     vault.load();
     let unlisten: UnlistenFn | null = null;
     startSync().then((u) => (unlisten = u));
-    return () => unlisten?.();
+    return () => {
+      unlisten?.();
+      stopScheduler();
+    };
   });
 
   $effect(() => {
@@ -39,6 +43,13 @@
       notes.loadFromVault(vault.path);
       boards.load(vault.path);
       vaultApi.watchVault(vault.path).catch((e) => console.error("watch_vault failed", e));
+      untrack(() => startScheduler());
+    }
+  });
+
+  $effect(() => {
+    if (tasks.isLoaded && vault.path) {
+      untrack(() => runCheckNow());
     }
   });
 

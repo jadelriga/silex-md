@@ -176,13 +176,12 @@ pub async fn watch_vault(
     *guard = None;
 
     let app_for_cb = app.clone();
-    let mut watcher = notify::recommended_watcher(move |res: notify::Result<notify::Event>| {
-        match res {
+    let mut watcher =
+        notify::recommended_watcher(move |res: notify::Result<notify::Event>| match res {
             Ok(event) => emit_change(&app_for_cb, event),
             Err(e) => eprintln!("Watcher error: {:?}", e),
-        }
-    })
-    .map_err(|e| e.to_string())?;
+        })
+        .map_err(|e| e.to_string())?;
 
     watcher
         .watch(Path::new(&path), RecursiveMode::Recursive)

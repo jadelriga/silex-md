@@ -64,7 +64,7 @@ Build this with integration tests **before** features on top.
 - [x] **8. Task detail panel** — lazy body load, CodeMirror 6 editor, debounced autosave (300ms), dirty-state tracking, conflict banner
 - [x] **9. Notes** — sidebar tree + full-area editor, same sync loop. Wikilinks/backlinks deferred to post-v1.
 - [x] **10. Calendar view** — read-only over local due dates, behind `CalendarAdapter` interface
-- [ ] **11. Notifications** — Tauri plugin + 15-minute interval, configurable lead time
+- [x] **11. Notifications** — Tauri plugin + 15-minute interval, configurable lead time
 - [ ] **12. Embedded terminal** — portable-pty + xterm.js (real PTY required, not piped stdio)
 - [ ] **13. Command palette** — `Cmd+P`, custom Svelte component
 - [ ] **14. Search overlay** — `Cmd+K`, in-memory, frontmatter + title only in v1
@@ -91,7 +91,29 @@ Cloud sync. Multi-user. Mobile app. App Store distribution. Plugin system. Recur
 
 ## Current status
 
-**Step 10 complete.** Ready for step 11.
+**Step 11 complete.** Ready for step 12.
+
+**Step 11 added:**
+- `tauri-plugin-notification` installed (Rust + JS), permission `notification:default` granted in capabilities.
+- `src/lib/scheduler.ts` — `startScheduler()` runs `checkAndNotify()` immediately and every 15 minutes; `stopScheduler()` clears the interval. Pure helper `dueTodayUnnotified(entries, today, alreadyNotified)` is exported and tested independently. In-memory `Set<string>` of notified paths dedupes within a session.
+- Permission flow: first call invokes `requestPermission()` via the plugin if the OS hasn't granted it yet. macOS will show its native permission prompt once.
+- Notification format: title `"Due today: <task title or filename>"`, body shows priority when present.
+- Layout: `startScheduler()` runs whenever `vault.path` is set (alongside other vault-load actions), `stopScheduler()` cleans up on unmount.
+- Tests: `src/lib/scheduler.test.ts` adds 8 tests for `todayIso` formatting and `dueTodayUnnotified` filtering (today match, not-today, already-notified, no due, non-string due, multiple, partial-notified). Total now **43 JS tests** + 4 Rust tests, all passing.
+
+**Step 11 deferrals:**
+- Configurable lead time (notify N days before due) — our `due` is date-only with no time-of-day. Add as a polish item once we have a settings UI.
+- Click-notification → focus task. macOS default behavior brings the app to focus on click; we don't yet capture which task was clicked. Plumbing requires a notification payload + a click handler via the plugin's action API.
+- Re-trigger checks on task edits. Currently `runCheckNow` only fires when `tasks.isLoaded` transitions (once per `loadFromVault`). Editing a task to be due-today during a session won't notify until the next 15-minute tick or the next app launch. Could be added with a debounced effect on `tasks.entries` if it becomes annoying.
+
+**Step 11 — known race / fix log (so we don't trip on these again):**
+- Initial implementation called `void checkAndNotify()` synchronously inside `startScheduler()`. The synchronous reactive read of `tasks.entries.values()` was tracked by the layout's `$effect` that called `startScheduler`, so any change to `tasks.entries` re-ran the entire vault-load chain → notes section flickering and boards not loading. Fix: wrap `startScheduler()` in `untrack(() => ...)` at the layout call site.
+- Permission prompt only fired when `checkAndNotify` actually had a task to send; if no tasks were due today, `ensurePermission` was never called, no prompt, user never knew notifications existed. Fix: `startScheduler` calls `void ensurePermission()` upfront.
+- Race: `startScheduler` ran synchronously alongside `tasks.loadFromVault` (async). The immediate `checkAndNotify` saw an empty `tasks.entries` and noticed nothing. Fix: a separate layout `$effect` watches `tasks.isLoaded` and calls `runCheckNow()` (also `untrack`-wrapped) whenever it transitions to `true`, which happens after `loadFromVault` completes.
+
+**Notes for future user-facing iteration on this:**
+- The user has reservations about due-date notifications being the right model. The mental model they had was time-based **reminders** ("remind me at day X at time Y"), which is a different feature: it needs a time-of-day field on tasks (or a separate `reminders` array per task) and either a more granular in-app scheduler or OS-level scheduled notifications via `tauri-plugin-notification`'s schedule API. Most of step 11's plumbing is reusable for that — the permission flow, the in-memory dedup pattern, the notification-sending. The trigger mechanism would change.
+- `due` is treated as fully optional throughout: detail panel deletes the field when empty, calendar/scheduler/cards all gracefully ignore missing or non-string dates.
 
 **Step 10 added:**
 - `@event-calendar/core` and `@event-calendar/day-grid` installed (Svelte 5 native, lightweight).
@@ -227,6 +249,7 @@ Cloud sync. Multi-user. Mobile app. App Store distribution. Plugin system. Recur
 - **Custom column order per board.** Currently columns render alphabetically (`backlog`, `done`, `in-progress`), which puts done before in-progress. Fix: introduce a per-board metadata file (e.g. `_silex.json` at `<vault>/boards/<board>/_silex.json`) holding `{ "columns": ["backlog", "in-progress", "done"] }`. Have `list_boards` read it; columns not in the file go after the listed ones, alphabetical. Falls back gracefully when the file is missing.
 - Add card / column / board UI affordances.
 - Delete card / column / board UI affordances.
+- **Time-based reminders** (separate from due-date notifications). Add a `reminders` array per task with `{ at: "2026-05-10T14:30", notified?: bool }`, schedule via the OS-level scheduling API of `tauri-plugin-notification` (so reminders fire even when the app is closed) or extend our in-app scheduler with finer granularity. Reuses the permission flow and notification-sending plumbing from step 11.
 - **Calendar doesn't fill the available height.** The grid renders ~5 rows of natural height and leaves the area below empty. Things tried that didn't fix it: setting `height: '100%'` on the EC options, making `<main>` a flex column with `flex flex-col min-w-0`, changing the wrapper from `h-full` to `flex-1 min-h-0`, making the wrapper itself a flex column with `.ec { flex: 1 1 0%; min-height: 0 }`. EC's mounted `.ec` element seems to internally cap at content height regardless of parent. Worth investigating EC's source for how it sizes month-view rows (it may compute row height from a separate `--ec-day-height` or auto-size based on visible cells). If we adopt week view too, this might naturally fix itself with `height: 'auto'` plus an aspect ratio. Tackle this when we revisit calendar polish.
 
 ## Markdown editor alternatives
