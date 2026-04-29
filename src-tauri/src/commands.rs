@@ -127,6 +127,41 @@ pub async fn read_task_body(path: String) -> Result<String, String> {
 }
 
 #[tauri::command]
+pub async fn read_bodies(
+    vault_path: String,
+) -> Result<std::collections::HashMap<String, String>, String> {
+    let vault = PathBuf::from(&vault_path);
+    if !vault.is_dir() {
+        return Err(format!("Vault path is not a directory: {}", vault_path));
+    }
+    let templates_dir = vault.join("templates");
+    let mut out = std::collections::HashMap::new();
+    for entry in WalkDir::new(&vault)
+        .follow_links(false)
+        .into_iter()
+        .filter_map(|e| e.ok())
+    {
+        if !entry.file_type().is_file() {
+            continue;
+        }
+        let p = entry.path();
+        if p.extension().and_then(|s| s.to_str()) != Some("md") {
+            continue;
+        }
+        if p.starts_with(&templates_dir) {
+            continue;
+        }
+        let content = match fs::read_to_string(p) {
+            Ok(c) => c,
+            Err(_) => continue,
+        };
+        let parsed = Matter::<YAML>::new().parse(&content);
+        out.insert(p.to_string_lossy().into_owned(), parsed.content);
+    }
+    Ok(out)
+}
+
+#[tauri::command]
 pub async fn write_task(path: String, content: String) -> Result<String, String> {
     let p = PathBuf::from(&path);
     let parent = p

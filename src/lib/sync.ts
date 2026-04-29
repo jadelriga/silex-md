@@ -3,6 +3,7 @@ import { vaultApi } from "$lib/api/vault";
 import { tasks } from "$lib/stores/tasks.svelte";
 import { notes } from "$lib/stores/notes.svelte";
 import { boards } from "$lib/stores/boards.svelte";
+import { bodies } from "$lib/stores/bodies.svelte";
 import { writeHashes } from "$lib/stores/writeHashes";
 import { vault } from "$lib/stores/vault.svelte";
 import { syncEvents } from "$lib/stores/syncEvents.svelte";
@@ -22,6 +23,7 @@ export async function handleVaultChange(change: VaultChangeEvent): Promise<void>
     writeHashes.delete(path);
     tasks.remove(path);
     notes.remove(path);
+    bodies.invalidate(path);
     if (vault.path) boards.load(vault.path);
     return;
   }
@@ -39,6 +41,7 @@ export async function handleVaultChange(change: VaultChangeEvent): Promise<void>
       else if (entry.kind === "note") notes.upsert(entry);
     }
     boards.load(vault.path);
+    if (bodies.isLoaded) void bodies.refresh(path);
     syncEvents.externalChange = { path, ts: Date.now() };
   } catch (e) {
     console.error("Failed to refresh entry", path, e);

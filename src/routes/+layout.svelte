@@ -15,6 +15,7 @@
   import NotesTree from "$lib/components/NotesTree.svelte";
   import Terminal from "$lib/components/Terminal.svelte";
   import CommandPalette from "$lib/components/CommandPalette.svelte";
+  import SearchOverlay from "$lib/components/SearchOverlay.svelte";
   import { fly } from "svelte/transition";
   import { quintOut } from "svelte/easing";
   import type { UnlistenFn } from "@tauri-apps/api/event";
@@ -89,7 +90,12 @@
         ui.paletteOpen = !ui.paletteOpen;
         return;
       }
-      if (e.key === "Escape" && ui.openTaskPath && !ui.paletteOpen) {
+      if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key.toLowerCase() === "f") {
+        e.preventDefault();
+        ui.searchOpen = !ui.searchOpen;
+        return;
+      }
+      if (e.key === "Escape" && ui.openTaskPath && !ui.paletteOpen && !ui.searchOpen) {
         ui.openTaskPath = null;
       }
     };
@@ -206,6 +212,7 @@
 {/if}
 
 <CommandPalette />
+<SearchOverlay />
 
 {#if ui.openTaskPath}
   <div

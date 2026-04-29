@@ -2,8 +2,8 @@ mod commands;
 mod pty;
 
 use commands::{
-    delete_task, list_boards, move_task, read_entry, read_task_body, read_vault, watch_vault,
-    write_task, WatcherState,
+    delete_task, list_boards, move_task, read_bodies, read_entry, read_task_body, read_vault,
+    watch_vault, write_task, WatcherState,
 };
 use pty::{shell_input, shell_kill, shell_resize, spawn_shell, PtyState};
 
@@ -25,6 +25,7 @@ pub fn run() {
             delete_task,
             watch_vault,
             list_boards,
+            read_bodies,
             spawn_shell,
             shell_input,
             shell_resize,

@@ -67,7 +67,7 @@ Build this with integration tests **before** features on top.
 - [x] **11. Notifications** — Tauri plugin + 15-minute interval, configurable lead time
 - [x] **12. Embedded terminal** — portable-pty + xterm.js (real PTY required, not piped stdio)
 - [x] **13. Command palette** — `Cmd+P`, custom Svelte component
-- [ ] **14. Search overlay** — `Cmd+Shift+F` (changed from spec's `Cmd+K` per user preference), in-memory, frontmatter + title only in v1
+- [x] **14. Search overlay** — `Cmd+Shift+F`, full-text across title + frontmatter + body (scope expanded from "frontmatter + title only" per user preference)
 - [ ] **15. Theming + keyboard shortcuts** — incremental throughout; CSS variables for theme swap
 
 ## Key decisions (and why)
@@ -91,7 +91,24 @@ Cloud sync. Multi-user. Mobile app. App Store distribution. Plugin system. Recur
 
 ## Current status
 
-**Step 13 complete.** Ready for step 14.
+**Step 14 complete.** Ready for step 15.
+
+**Step 14 added:**
+- New Rust command `read_bodies(vaultPath)` walks the vault and returns `HashMap<path, body>` for every `.md` file outside `/templates`. The body is the post-frontmatter content extracted via `gray_matter`.
+- `src/lib/stores/bodies.svelte.ts` — `bodies` store with `cache: SvelteMap<path, body>`, `isLoaded`, `isLoading`, `error`. `ensureLoaded(vaultPath)` loads the cache lazily on first search-open. `invalidate(path)` deletes one entry; `refresh(path)` re-reads via `read_task_body`. `reset()` clears state when vaults change.
+- `tasks.save` and `notes.save` call `bodies.refresh(path)` after writing (only if cache is loaded), so search stays current with edits.
+- Sync handler invalidates the cache for `removed` events and refreshes for external `created`/`modified` events.
+- `src/lib/utils/search.ts`: `searchEntries(entries, bodies, query, limit=50)` does case-insensitive multi-token AND-substring matching across title + flattened frontmatter values + body. Returns `SearchHit[]` with `{ path, kind, title, hint, snippet }`. `buildSnippet(body, query, span=120)` centers a snippet around the first query match with `…` ellipses on either side, collapsing whitespace.
+- `src/lib/components/SearchOverlay.svelte` — 48rem dark overlay opened by `⌘⇧F` (or via `ui.searchOpen`). Triggers `bodies.ensureLoaded` on open. Each result shows kind pill (task/note), title, board/column or relative path hint, and a one-line snippet. Arrow keys navigate (wraps), Enter opens (task → detail panel; note → main-area route), Esc/backdrop-click closes. Click handler `stopPropagation`s so opening a task here doesn't get cancelled by the detail panel's clickOutside (same fix as step 13).
+- Layout: `⌘⇧F` toggles `ui.searchOpen`; Esc-closes-task-panel branch updated to also skip when search overlay is open.
+- Tests: `src/lib/utils/search.test.ts` adds 12 tests covering `frontmatterText`, `buildSnippet`, and `searchEntries` (empty, title match, case-insensitivity, multi-token AND, frontmatter, body via cache, limit). Total now **66 JS tests** + 4 Rust tests, all passing.
+
+**Step 14 deferrals:**
+- Filter chips (board / status / priority / tags / due range). The infrastructure is there; needs UI.
+- Fuzzy ranking (e.g., `fzf`-style scoring). Substring is fine for now.
+- Replace substring with `minisearch` once the vault is large enough that linear scans feel slow.
+- Highlight the matched term in the snippet/title.
+- **Mutual exclusion of overlays.** Right now, opening the command palette while search is open (or vice versa) leaves both rendered on top of each other. Triggering one should close the other. Quick fix: each shortcut handler sets the other's `*Open` flag to `false` before flipping its own. Same applies to `Esc` priority order. Worth doing as a tiny polish pass once we touch the shortcut handler again (likely in step 15).
 
 **Step 13 added:**
 - `src/lib/utils/palette.ts` — `PaletteItem` type, `buildPaletteItems(sources)` builds the action list from boards/notes/tasks plus two static actions (go to calendar, toggle terminal). `filterPaletteItems(items, query, limit=30)` does case-insensitive multi-token AND-substring matching against each item's `search` string. Both are pure functions.

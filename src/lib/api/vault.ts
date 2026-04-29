@@ -42,4 +42,7 @@ export const vaultApi = {
   listBoards(vaultPath: string): Promise<BoardLayout[]> {
     return invoke("list_boards", { vaultPath });
   },
+  readBodies(vaultPath: string): Promise<Record<string, string>> {
+    return invoke("read_bodies", { vaultPath });
+  },
 };
