@@ -65,7 +65,7 @@ Build this with integration tests **before** features on top.
 - [x] **9. Notes** — sidebar tree + full-area editor, same sync loop. Wikilinks/backlinks deferred to post-v1.
 - [x] **10. Calendar view** — read-only over local due dates, behind `CalendarAdapter` interface
 - [x] **11. Notifications** — Tauri plugin + 15-minute interval, configurable lead time
-- [ ] **12. Embedded terminal** — portable-pty + xterm.js (real PTY required, not piped stdio)
+- [x] **12. Embedded terminal** — portable-pty + xterm.js (real PTY required, not piped stdio)
 - [ ] **13. Command palette** — `Cmd+P`, custom Svelte component
 - [ ] **14. Search overlay** — `Cmd+K`, in-memory, frontmatter + title only in v1
 - [ ] **15. Theming + keyboard shortcuts** — incremental throughout; CSS variables for theme swap
@@ -91,7 +91,29 @@ Cloud sync. Multi-user. Mobile app. App Store distribution. Plugin system. Recur
 
 ## Current status
 
-**Step 11 complete.** Ready for step 12.
+**Step 12 complete.** Ready for step 13.
+
+**Step 12 added:**
+- Rust crate `portable-pty` (the wezterm-pedigree cross-platform PTY).
+- New module `src-tauri/src/pty.rs`:
+  - `PtyState` — `Mutex<HashMap<String, PtySession>>` managed by Tauri. Each session holds a `MasterPty`, a writer, and the spawned `Child`.
+  - `spawn_shell(cwd)` opens a 24×80 PTY, spawns `$SHELL` (falling back to `/bin/sh`) inside it with the inherited env plus `TERM=xterm-256color`. Spawns a reader thread per session that emits `shell:output { id, data }` chunks to the frontend, and a `shell:exit { id }` event when the reader hits EOF.
+  - `shell_input(sessionId, data)` writes UTF-8 data to the PTY master writer.
+  - `shell_resize(sessionId, cols, rows)` resizes the PTY.
+  - `shell_kill(sessionId)` removes the session and kills the child.
+- npm packages: `@xterm/xterm`, `@xterm/addon-fit`.
+- `src/lib/components/Terminal.svelte`:
+  - Dynamic-imports xterm modules in `onMount` so Vite SSR pre-processing doesn't trip on browser-only code.
+  - One terminal session per mount: spawns shell with `cwd = vault.path`, listens for `shell:output` / `shell:exit` events for its session id, pipes `term.onData` to `shell_input`, `term.onResize` to `shell_resize`, and a `ResizeObserver` calls `fitAddon.fit()` so the geometry stays correct when the panel is resized or the window changes size.
+  - `onDestroy` unlistens, calls `shell_kill`, and disposes the terminal. Closing the panel (Cmd+J or close button) tears down the session; reopening creates a fresh one.
+- Layout: the bottom panel's placeholder is replaced with `<Terminal />`, wrapped in a `flex-1 min-h-0` div so xterm's canvas sizes correctly.
+
+**Step 12 deferrals:**
+- Persistent terminal across panel toggles. Currently each open creates a new session. Could be added by hoisting the Terminal mount above the `{#if ui.terminalOpen}` (using `display: none` to hide instead of unmount) so a long-running command isn't killed when you peek at a board and come back.
+- Multiple terminal tabs. The state already supports multiple sessions, only the UI is single-pane.
+- Theming via CSS vars / per-user font config. The current theme is hardcoded.
+- Copy/paste keybindings beyond xterm's defaults.
+- Ligatures / image protocol / etc. — xterm.js add-ons exist for these; not added.
 
 **Step 11 added:**
 - `tauri-plugin-notification` installed (Rust + JS), permission `notification:default` granted in capabilities.
@@ -250,6 +272,8 @@ Cloud sync. Multi-user. Mobile app. App Store distribution. Plugin system. Recur
 - Add card / column / board UI affordances.
 - Delete card / column / board UI affordances.
 - **Time-based reminders** (separate from due-date notifications). Add a `reminders` array per task with `{ at: "2026-05-10T14:30", notified?: bool }`, schedule via the OS-level scheduling API of `tauri-plugin-notification` (so reminders fire even when the app is closed) or extend our in-app scheduler with finer granularity. Reuses the permission flow and notification-sending plumbing from step 11.
+- **Terminal font with broader glyph coverage.** Current font (`ui-monospace, "SF Mono", Menlo, monospace`) lacks some special characters used by Claude Code and other TUI tools (rendered as `?`). Options: bundle a Nerd Font, use JetBrains Mono / Fira Code via `@fontsource`, or add a settings field where the user picks their preferred terminal font. Easy win once we have a settings UI.
+- **Persist terminal panel height** across app restarts via the Tauri store plugin. Right now it resets to 240px each launch.
 - **Calendar doesn't fill the available height.** The grid renders ~5 rows of natural height and leaves the area below empty. Things tried that didn't fix it: setting `height: '100%'` on the EC options, making `<main>` a flex column with `flex flex-col min-w-0`, changing the wrapper from `h-full` to `flex-1 min-h-0`, making the wrapper itself a flex column with `.ec { flex: 1 1 0%; min-height: 0 }`. EC's mounted `.ec` element seems to internally cap at content height regardless of parent. Worth investigating EC's source for how it sizes month-view rows (it may compute row height from a separate `--ec-day-height` or auto-size based on visible cells). If we adopt week view too, this might naturally fix itself with `height: 'auto'` plus an aspect ratio. Tackle this when we revisit calendar polish.
 
 ## Markdown editor alternatives

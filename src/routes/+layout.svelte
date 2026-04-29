@@ -13,11 +13,34 @@
   import VaultSetup from "$lib/components/VaultSetup.svelte";
   import TaskDetailPanel from "$lib/components/TaskDetailPanel.svelte";
   import NotesTree from "$lib/components/NotesTree.svelte";
+  import Terminal from "$lib/components/Terminal.svelte";
   import { fly } from "svelte/transition";
   import { quintOut } from "svelte/easing";
   import type { UnlistenFn } from "@tauri-apps/api/event";
 
   let notesExpanded = $state(new Set<string>());
+  let terminalHeight = $state(240);
+
+  function startTerminalResize(e: MouseEvent) {
+    e.preventDefault();
+    const startY = e.clientY;
+    const startHeight = terminalHeight;
+    const onMove = (ev: MouseEvent) => {
+      const delta = startY - ev.clientY;
+      const next = Math.max(80, Math.min(window.innerHeight - 120, startHeight + delta));
+      terminalHeight = next;
+    };
+    const onUp = () => {
+      window.removeEventListener("mousemove", onMove);
+      window.removeEventListener("mouseup", onUp);
+      document.body.style.userSelect = "";
+      document.body.style.cursor = "";
+    };
+    document.body.style.userSelect = "none";
+    document.body.style.cursor = "ns-resize";
+    window.addEventListener("mousemove", onMove);
+    window.addEventListener("mouseup", onUp);
+  }
 
   const activeBoard = $derived(
     page.url.pathname.startsWith("/boards/")
@@ -144,7 +167,17 @@
   </div>
 
   {#if ui.terminalOpen}
-    <section class="h-60 shrink-0 border-t border-neutral-800 bg-black text-neutral-200 font-mono text-sm flex flex-col">
+    <section
+      class="shrink-0 border-t border-neutral-800 bg-black text-neutral-200 font-mono text-sm flex flex-col"
+      style="height: {terminalHeight}px"
+    >
+      <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
+      <div
+        role="separator"
+        aria-orientation="horizontal"
+        onmousedown={startTerminalResize}
+        class="h-1 -mt-0.5 cursor-ns-resize hover:bg-neutral-700 shrink-0"
+      ></div>
       <div class="flex items-center justify-between px-3 py-1 border-b border-neutral-800 text-xs text-neutral-500">
         <span>Terminal</span>
         <button
@@ -155,7 +188,9 @@
           close
         </button>
       </div>
-      <div class="p-3 text-neutral-500 italic">Terminal will be wired up in step 12.</div>
+      <div class="flex-1 min-h-0">
+        <Terminal />
+      </div>
     </section>
   {/if}
 </div>
