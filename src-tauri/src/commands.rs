@@ -30,6 +30,30 @@ pub struct BoardLayout {
     pub columns: Vec<String>,
 }
 
+#[derive(Serialize, Deserialize, Default, Clone)]
+pub struct BoardMeta {
+    #[serde(default)]
+    pub columns: Vec<String>,
+}
+
+fn read_board_meta(board_dir: &Path) -> BoardMeta {
+    let meta_path = board_dir.join("_silex.json");
+    if !meta_path.is_file() {
+        return BoardMeta::default();
+    }
+    let content = match fs::read_to_string(&meta_path) {
+        Ok(c) => c,
+        Err(_) => return BoardMeta::default(),
+    };
+    serde_json::from_str(&content).unwrap_or_default()
+}
+
+fn write_board_meta(board_dir: &Path, meta: &BoardMeta) -> Result<(), String> {
+    let meta_path = board_dir.join("_silex.json");
+    let json = serde_json::to_string_pretty(meta).map_err(|e| e.to_string())?;
+    fs::write(&meta_path, json).map_err(|e| e.to_string())
+}
+
 pub struct WatcherState {
     pub watcher: Mutex<Option<RecommendedWatcher>>,
 }
@@ -133,22 +157,89 @@ pub async fn list_boards(vault_path: String) -> Result<Vec<BoardLayout>, String>
             continue;
         }
         let board_name = board_entry.file_name().to_string_lossy().into_owned();
-        let mut columns = Vec::new();
-        if let Ok(col_dirs) = fs::read_dir(board_entry.path()) {
+        let board_path = board_entry.path();
+
+        let mut existing_columns: Vec<String> = Vec::new();
+        if let Ok(col_dirs) = fs::read_dir(&board_path) {
             for col_entry in col_dirs.flatten() {
                 if col_entry.file_type().map(|t| t.is_dir()).unwrap_or(false) {
-                    columns.push(col_entry.file_name().to_string_lossy().into_owned());
+                    existing_columns.push(col_entry.file_name().to_string_lossy().into_owned());
                 }
             }
         }
-        columns.sort();
+        existing_columns.sort();
+
+        let meta = read_board_meta(&board_path);
+        let mut ordered_columns: Vec<String> = Vec::new();
+        for c in &meta.columns {
+            if existing_columns.contains(c) && !ordered_columns.contains(c) {
+                ordered_columns.push(c.clone());
+            }
+        }
+        for c in &existing_columns {
+            if !ordered_columns.contains(c) {
+                ordered_columns.push(c.clone());
+            }
+        }
+
         layouts.push(BoardLayout {
             name: board_name,
-            columns,
+            columns: ordered_columns,
         });
     }
     layouts.sort_by(|a, b| a.name.cmp(&b.name));
     Ok(layouts)
+}
+
+#[tauri::command]
+pub async fn set_board_column_order(
+    vault_path: String,
+    board_name: String,
+    columns: Vec<String>,
+) -> Result<(), String> {
+    if board_name.contains('/') || board_name.contains("..") {
+        return Err("Invalid board name".to_string());
+    }
+    let board_dir = PathBuf::from(&vault_path).join("boards").join(&board_name);
+    if !board_dir.is_dir() {
+        return Err(format!("Board not found: {}", board_name));
+    }
+    write_board_meta(&board_dir, &BoardMeta { columns })
+}
+
+#[tauri::command]
+pub async fn create_column(
+    vault_path: String,
+    board_name: String,
+    column_name: String,
+) -> Result<(), String> {
+    let trimmed_board = board_name.trim();
+    let trimmed_col = column_name.trim();
+    if trimmed_col.is_empty() {
+        return Err("Column name cannot be empty".to_string());
+    }
+    if trimmed_col.contains('/') || trimmed_col.contains("..") {
+        return Err("Column name cannot contain '/' or '..'".to_string());
+    }
+    if trimmed_board.is_empty() || trimmed_board.contains('/') || trimmed_board.contains("..") {
+        return Err("Invalid board name".to_string());
+    }
+    let board_dir = PathBuf::from(&vault_path).join("boards").join(trimmed_board);
+    if !board_dir.is_dir() {
+        return Err(format!("Board not found: {}", trimmed_board));
+    }
+    let column_dir = board_dir.join(trimmed_col);
+    if column_dir.exists() {
+        return Err(format!("Column '{}' already exists", trimmed_col));
+    }
+    fs::create_dir_all(&column_dir).map_err(|e| e.to_string())?;
+
+    let mut meta = read_board_meta(&board_dir);
+    if !meta.columns.contains(&trimmed_col.to_string()) {
+        meta.columns.push(trimmed_col.to_string());
+    }
+    write_board_meta(&board_dir, &meta)?;
+    Ok(())
 }
 
 #[tauri::command]
@@ -618,5 +709,31 @@ mod tests {
     fn create_note_rejects_paths_under_boards() {
         let dir = tempfile::tempdir().unwrap();
         assert!(do_create_note(dir.path(), "boards/foo").is_err());
+    }
+
+    #[test]
+    fn read_board_meta_returns_default_when_file_is_missing() {
+        let dir = tempfile::tempdir().unwrap();
+        let meta = read_board_meta(dir.path());
+        assert!(meta.columns.is_empty());
+    }
+
+    #[test]
+    fn write_then_read_board_meta_roundtrip() {
+        let dir = tempfile::tempdir().unwrap();
+        let original = BoardMeta {
+            columns: vec!["backlog".to_string(), "in-progress".to_string(), "done".to_string()],
+        };
+        write_board_meta(dir.path(), &original).unwrap();
+        let loaded = read_board_meta(dir.path());
+        assert_eq!(loaded.columns, original.columns);
+    }
+
+    #[test]
+    fn read_board_meta_returns_default_for_invalid_json() {
+        let dir = tempfile::tempdir().unwrap();
+        fs::write(dir.path().join("_silex.json"), "not json").unwrap();
+        let meta = read_board_meta(dir.path());
+        assert!(meta.columns.is_empty());
     }
 }

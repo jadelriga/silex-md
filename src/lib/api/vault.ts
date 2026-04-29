@@ -60,4 +60,14 @@ export const vaultApi = {
   createNote(vaultPath: string, relativePath: string): Promise<string> {
     return invoke("create_note", { vaultPath, relativePath });
   },
+  createColumn(vaultPath: string, boardName: string, columnName: string): Promise<void> {
+    return invoke("create_column", { vaultPath, boardName, columnName });
+  },
+  setBoardColumnOrder(
+    vaultPath: string,
+    boardName: string,
+    columns: string[],
+  ): Promise<void> {
+    return invoke("set_board_column_order", { vaultPath, boardName, columns });
+  },
 };
