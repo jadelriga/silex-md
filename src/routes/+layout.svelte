@@ -21,6 +21,7 @@
   import CreateInput from "$lib/components/CreateInput.svelte";
   import { goto } from "$app/navigation";
   import { noteHref, noteRelativePath } from "$lib/utils/notePath";
+  import { ask } from "@tauri-apps/plugin-dialog";
   import { fly } from "svelte/transition";
   import { quintOut } from "svelte/easing";
   import type { UnlistenFn } from "@tauri-apps/api/event";
@@ -151,6 +152,46 @@
     if (!vault.path) return;
     await vaultApi.createNoteFolder(vault.path, relativePath);
     ui.creating = null;
+    await notes.refreshFolders();
+  }
+
+  function onNotesRootDragOver(e: DragEvent) {
+    if (!ui.notesDrag) return;
+    e.preventDefault();
+    if (e.dataTransfer) e.dataTransfer.dropEffect = "move";
+  }
+
+  async function onNotesRootDrop(e: DragEvent) {
+    e.preventDefault();
+    const drag = ui.notesDrag;
+    ui.notesDrag = null;
+    ui.notesDragOver = null;
+    if (!drag || !vault.path) return;
+    const filename = drag.path.split("/").pop()!;
+    const newPath = `${vault.path}/${filename}`;
+    if (newPath === drag.path) return;
+    try {
+      await vaultApi.movePath(drag.path, newPath);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      if (msg.startsWith("DestinationExists")) {
+        const replace = await ask(`A file already exists at:\n${newPath}\n\nReplace it?`, {
+          title: "Replace file?",
+          kind: "warning",
+          okLabel: "Replace",
+          cancelLabel: "Cancel",
+        });
+        if (replace) {
+          try {
+            await vaultApi.movePath(drag.path, newPath, true);
+          } catch (err2) {
+            console.error("Failed to move to root (with overwrite)", err2);
+          }
+        }
+      } else {
+        console.error("Failed to move note to root", err);
+      }
+    }
   }
 </script>
 
@@ -179,7 +220,7 @@
           </p>
         {/if}
       </div>
-      <nav class="flex-1 overflow-y-auto p-2 text-sm space-y-3">
+      <nav class="flex-1 overflow-y-auto p-2 text-sm flex flex-col gap-3 min-h-0">
         <div>
           <a
             href="/calendar"
@@ -238,8 +279,8 @@
           {/if}
         </div>
 
-        <div>
-          <div class="group px-2 py-1 flex items-center justify-between">
+        <div class="flex-1 flex flex-col min-h-0">
+          <div class="group px-2 py-1 flex items-center justify-between shrink-0">
             <span class="text-xs uppercase tracking-wide text-fg-subtle">Notes</span>
             {#if vault.path}
               <div class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -287,17 +328,24 @@
               onCancel={() => (ui.creating = null)}
             />
           {/if}
-          {#if !vault.path}
-            <div class="px-2 py-1 text-fg-faint italic">No vault loaded</div>
-          {:else if !notes.isLoaded}
-            <div class="px-2 py-1 text-fg-faint italic">Loading…</div>
-          {:else if notes.error}
-            <div class="px-2 py-1 text-red-400 text-xs">{notes.error}</div>
-          {:else if notes.tree.length === 0}
-            <div class="px-2 py-1 text-fg-faint italic">No notes yet</div>
-          {:else}
-            <NotesTree nodes={notes.tree} bind:expanded={notesExpanded} />
-          {/if}
+          <!-- svelte-ignore a11y_no_static_element_interactions -->
+          <div
+            ondragover={onNotesRootDragOver}
+            ondrop={onNotesRootDrop}
+            class="flex-1 min-h-[2rem] {ui.notesDrag ? 'rounded outline-dashed outline-1 outline-fg-faint/30' : ''}"
+          >
+            {#if !vault.path}
+              <div class="px-2 py-1 text-fg-faint italic">No vault loaded</div>
+            {:else if !notes.isLoaded}
+              <div class="px-2 py-1 text-fg-faint italic">Loading…</div>
+            {:else if notes.error}
+              <div class="px-2 py-1 text-red-400 text-xs">{notes.error}</div>
+            {:else if notes.tree.length === 0}
+              <div class="px-2 py-1 text-fg-faint italic">No notes yet</div>
+            {:else}
+              <NotesTree nodes={notes.tree} bind:expanded={notesExpanded} />
+            {/if}
+          </div>
         </div>
       </nav>
     </aside>

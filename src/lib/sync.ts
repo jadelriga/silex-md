@@ -39,9 +39,16 @@ export async function handleVaultChange(change: VaultChangeEvent): Promise<void>
     if (entry) {
       if (entry.kind === "task") tasks.upsert(entry);
       else if (entry.kind === "note") notes.upsert(entry);
+      if (bodies.isLoaded) void bodies.refresh(path);
+    } else {
+      // File no longer exists at this path (e.g. rename source on macOS reports
+      // Modify(Name) for both old and new paths; the old path's read returns
+      // null). Treat as a removal.
+      tasks.remove(path);
+      notes.remove(path);
+      bodies.invalidate(path);
     }
     boards.load(vault.path);
-    if (bodies.isLoaded) void bodies.refresh(path);
     syncEvents.externalChange = { path, ts: Date.now() };
   } catch (e) {
     console.error("Failed to refresh entry", path, e);

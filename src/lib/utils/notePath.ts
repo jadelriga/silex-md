@@ -20,8 +20,17 @@ export type NoteTreeNode =
   | { type: "file"; name: string; relativePath: string; absolutePath: string }
   | { type: "folder"; name: string; relativePath: string; children: NoteTreeNode[] };
 
-export function buildNoteTree(notes: VaultEntry[], vaultPath: string): NoteTreeNode[] {
+export function buildNoteTree(
+  notes: VaultEntry[],
+  vaultPath: string,
+  folders: string[] = [],
+): NoteTreeNode[] {
   const root: NoteTreeNode[] = [];
+  for (const folder of folders) {
+    const segments = folder.split("/").filter(Boolean);
+    if (segments.length === 0) continue;
+    ensureFolder(root, segments, []);
+  }
   for (const note of notes) {
     const rel = noteRelativePath(note.path, vaultPath);
     if (!rel) continue;
@@ -30,6 +39,26 @@ export function buildNoteTree(notes: VaultEntry[], vaultPath: string): NoteTreeN
   }
   sortTree(root);
   return root;
+}
+
+function ensureFolder(
+  tree: NoteTreeNode[],
+  segments: string[],
+  prefix: string[],
+): void {
+  if (segments.length === 0) return;
+  const [head, ...rest] = segments;
+  let folder = tree.find((n) => n.type === "folder" && n.name === head);
+  if (!folder || folder.type !== "folder") {
+    folder = {
+      type: "folder",
+      name: head,
+      relativePath: [...prefix, head].join("/"),
+      children: [],
+    };
+    tree.push(folder);
+  }
+  ensureFolder(folder.children, rest, [...prefix, head]);
 }
 
 function insertNote(

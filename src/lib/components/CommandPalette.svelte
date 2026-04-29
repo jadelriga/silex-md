@@ -101,6 +101,10 @@
         bind:value={query}
         onkeydown={onKeydown}
         placeholder="Type a command, board, note, or task…"
+        autocomplete="off"
+        autocorrect="off"
+        autocapitalize="off"
+        spellcheck="false"
         class="w-full bg-transparent px-4 py-3 text-sm text-fg outline-none border-b border-border placeholder:text-fg-faint"
       />
       <ul class="max-h-[50vh] overflow-y-auto py-1">

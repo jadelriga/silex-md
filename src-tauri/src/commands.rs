@@ -84,6 +84,38 @@ pub async fn read_entry(vault_path: String, path: String) -> Result<Option<Vault
 }
 
 #[tauri::command]
+pub async fn list_note_folders(vault_path: String) -> Result<Vec<String>, String> {
+    let vault = PathBuf::from(&vault_path);
+    if !vault.is_dir() {
+        return Err(format!("Vault path is not a directory: {}", vault_path));
+    }
+    let boards_dir = vault.join("boards");
+    let templates_dir = vault.join("templates");
+    let mut out: Vec<String> = Vec::new();
+
+    for entry in WalkDir::new(&vault)
+        .follow_links(false)
+        .min_depth(1)
+        .into_iter()
+        .filter_entry(|e| {
+            let p = e.path();
+            !p.starts_with(&boards_dir) && !p.starts_with(&templates_dir)
+        })
+        .filter_map(|e| e.ok())
+    {
+        if !entry.file_type().is_dir() {
+            continue;
+        }
+        let p = entry.path();
+        if let Ok(rel) = p.strip_prefix(&vault) {
+            out.push(rel.to_string_lossy().into_owned());
+        }
+    }
+    out.sort();
+    Ok(out)
+}
+
+#[tauri::command]
 pub async fn list_boards(vault_path: String) -> Result<Vec<BoardLayout>, String> {
     let boards_dir = PathBuf::from(&vault_path).join("boards");
     if !boards_dir.is_dir() {
@@ -179,9 +211,20 @@ pub async fn write_task(path: String, content: String) -> Result<String, String>
 }
 
 #[tauri::command]
-pub async fn move_task(from: String, to: String) -> Result<(), String> {
+pub async fn move_task(
+    from: String,
+    to: String,
+    overwrite: Option<bool>,
+) -> Result<(), String> {
     let from_p = PathBuf::from(&from);
     let to_p = PathBuf::from(&to);
+
+    if from_p == to_p {
+        return Ok(());
+    }
+    if to_p.exists() && !overwrite.unwrap_or(false) {
+        return Err(format!("DestinationExists: {}", to));
+    }
 
     if let Some(parent) = to_p.parent() {
         fs::create_dir_all(parent).map_err(|e| e.to_string())?;

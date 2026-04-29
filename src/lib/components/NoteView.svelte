@@ -142,6 +142,10 @@
       <input
         bind:value={titleDraft}
         oninput={onTitleChange}
+        autocomplete="off"
+        autocorrect="off"
+        autocapitalize="off"
+        spellcheck="false"
         class="flex-1 bg-transparent text-2xl font-light text-fg outline-none placeholder:text-fg-faint"
         placeholder={fileName}
       />

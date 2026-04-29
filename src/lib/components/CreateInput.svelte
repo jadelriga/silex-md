@@ -68,6 +68,10 @@
       if (!error) submit();
     }}
     disabled={submitting}
+    autocomplete="off"
+    autocorrect="off"
+    autocapitalize="off"
+    spellcheck="false"
     class="w-full bg-surface-2 border border-border-strong rounded px-2 py-1 text-xs text-fg outline-none placeholder:text-fg-faint disabled:opacity-50"
   />
   {#if error}

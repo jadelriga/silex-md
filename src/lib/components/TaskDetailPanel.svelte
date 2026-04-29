@@ -190,6 +190,10 @@
       <input
         bind:value={titleDraft}
         oninput={onFieldChange}
+        autocomplete="off"
+        autocorrect="off"
+        autocapitalize="off"
+        spellcheck="false"
         class="w-full bg-transparent text-lg font-medium text-fg outline-none placeholder:text-fg-faint"
         placeholder="Title"
       />
@@ -210,6 +214,8 @@
           bind:value={dueDraft}
           oninput={onFieldChange}
           type="date"
+          autocomplete="off"
+          spellcheck="false"
           class="bg-surface-2 border border-border-strong rounded px-2 py-1 text-fg"
         />
 
@@ -217,6 +223,10 @@
           bind:value={estimateDraft}
           oninput={onFieldChange}
           placeholder="estimate"
+          autocomplete="off"
+          autocorrect="off"
+          autocapitalize="off"
+          spellcheck="false"
           class="bg-surface-2 border border-border-strong rounded px-2 py-1 text-fg w-28"
         />
       </div>
@@ -224,6 +234,10 @@
       <input
         bind:value={tagsDraft}
         oninput={onFieldChange}
+        autocomplete="off"
+        autocorrect="off"
+        autocapitalize="off"
+        spellcheck="false"
         class="w-full bg-surface-2 border border-border-strong rounded px-2 py-1 text-sm text-fg"
         placeholder="tags (comma-separated)"
       />

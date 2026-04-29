@@ -114,4 +114,28 @@ describe("buildNoteTree", () => {
       expect(tree[0].relativePath).toBe("note.md");
     }
   });
+
+  it("includes folders passed in even when they have no notes inside", () => {
+    const tree = buildNoteTree([], "/vault", ["empty-folder", "journal/2026"]);
+    expect(tree.find((n) => n.type === "folder" && n.name === "empty-folder")).toBeDefined();
+    const journal = tree.find((n) => n.type === "folder" && n.name === "journal");
+    expect(journal?.type).toBe("folder");
+    if (journal?.type === "folder") {
+      expect(journal.children.find((n) => n.name === "2026")).toBeDefined();
+    }
+  });
+
+  it("merges files into existing folder nodes", () => {
+    const tree = buildNoteTree(
+      [makeNote("/vault/journal/april.md")],
+      "/vault",
+      ["journal"],
+    );
+    const journal = tree.find((n) => n.type === "folder" && n.name === "journal");
+    expect(journal?.type).toBe("folder");
+    if (journal?.type === "folder") {
+      expect(journal.children.length).toBe(1);
+      expect(journal.children[0].name).toBe("april");
+    }
+  });
 });

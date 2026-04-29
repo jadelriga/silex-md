@@ -30,8 +30,11 @@ export const vaultApi = {
   writeTask(path: string, content: string): Promise<string> {
     return invoke("write_task", { path, content });
   },
-  moveTask(from: string, to: string): Promise<void> {
-    return invoke("move_task", { from, to });
+  moveTask(from: string, to: string, overwrite = false): Promise<void> {
+    return invoke("move_task", { from, to, overwrite });
+  },
+  movePath(from: string, to: string, overwrite = false): Promise<void> {
+    return invoke("move_task", { from, to, overwrite });
   },
   deleteTask(path: string): Promise<void> {
     return invoke("delete_task", { path });
@@ -41,6 +44,9 @@ export const vaultApi = {
   },
   listBoards(vaultPath: string): Promise<BoardLayout[]> {
     return invoke("list_boards", { vaultPath });
+  },
+  listNoteFolders(vaultPath: string): Promise<string[]> {
+    return invoke("list_note_folders", { vaultPath });
   },
   readBodies(vaultPath: string): Promise<Record<string, string>> {
     return invoke("read_bodies", { vaultPath });
