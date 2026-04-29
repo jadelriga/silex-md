@@ -1,6 +1,7 @@
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import { vaultApi } from "$lib/api/vault";
 import { tasks } from "$lib/stores/tasks.svelte";
+import { notes } from "$lib/stores/notes.svelte";
 import { boards } from "$lib/stores/boards.svelte";
 import { writeHashes } from "$lib/stores/writeHashes";
 import { vault } from "$lib/stores/vault.svelte";
@@ -20,6 +21,7 @@ export async function handleVaultChange(change: VaultChangeEvent): Promise<void>
   if (kind === "removed") {
     writeHashes.delete(path);
     tasks.remove(path);
+    notes.remove(path);
     if (vault.path) boards.load(vault.path);
     return;
   }
@@ -32,7 +34,10 @@ export async function handleVaultChange(change: VaultChangeEvent): Promise<void>
 
   try {
     const entry = await vaultApi.readEntry(vault.path, path);
-    if (entry) tasks.upsert(entry);
+    if (entry) {
+      if (entry.kind === "task") tasks.upsert(entry);
+      else if (entry.kind === "note") notes.upsert(entry);
+    }
     boards.load(vault.path);
     syncEvents.externalChange = { path, ts: Date.now() };
   } catch (e) {

@@ -58,6 +58,7 @@
       baseBody = body;
       bodyLoaded = true;
       externalChangeWhileDirty = false;
+      lastSavedAt = Date.now();
     } catch (e) {
       saveError = e instanceof Error ? e.message : String(e);
     }

@@ -62,7 +62,7 @@ Build this with integration tests **before** features on top.
 - [x] **6. Sync loop + integration tests** — `watch_vault` Rust + hash-dedup + reconciliation. Don't progress until bulletproof.
 - [x] **7. Kanban board** — svelte-dnd-action, file moves on drop, fractional-indexing for order
 - [x] **8. Task detail panel** — lazy body load, CodeMirror 6 editor, debounced autosave (300ms), dirty-state tracking, conflict banner
-- [ ] **9. Notes** — sidebar tree + full-area editor, same sync loop. Wikilinks/backlinks deferred to post-v1.
+- [x] **9. Notes** — sidebar tree + full-area editor, same sync loop. Wikilinks/backlinks deferred to post-v1.
 - [ ] **10. Calendar view** — read-only over local due dates, behind `CalendarAdapter` interface
 - [ ] **11. Notifications** — Tauri plugin + 15-minute interval, configurable lead time
 - [ ] **12. Embedded terminal** — portable-pty + xterm.js (real PTY required, not piped stdio)
@@ -91,7 +91,17 @@ Cloud sync. Multi-user. Mobile app. App Store distribution. Plugin system. Recur
 
 ## Current status
 
-**Step 8 complete.** Ready for step 9.
+**Step 9 complete.** Ready for step 10.
+
+**Step 9 added:**
+- `src/lib/utils/notePath.ts` — `noteRelativePath`, `noteHref`, `decodeNoteRouteParam`, plus `buildNoteTree` that turns a flat list of `VaultEntry` into a folder tree with files. Folders sort before files at each level, alphabetical. The display name strips `.md`; the relative path keeps it.
+- `src/lib/stores/notes.svelte.ts` — `notesStore` with `entries: SvelteMap<path, VaultEntry>`, `isLoaded`, `error`, plus a `$derived` `tree`. Methods: `loadFromVault`, `save` (same hash-before-write flow as tasks), `upsert`, `remove`. Filters `readVault` output to `kind === "note"`.
+- `src/lib/components/NotesTree.svelte` — recursive sidebar tree. Folders are buttons that toggle an `expanded: Set<string>` via `bind:expanded`. Files are anchor links to `/notes/<encoded path>`. Active note highlighted from `page.url.pathname`.
+- `src/lib/components/NoteView.svelte` — full-area editor for the main content region. Title input + edit/preview toggle. Same lazy body load + debounced autosave + conflict banner + checkbox toggle as `TaskDetailPanel`. Re-loads when `path` prop changes (no `{#key}` here — handled internally with a `lastLoadedPath` effect).
+- Route `src/routes/notes/[...path]/+page.svelte` — rest-parameter route, decodes the param to an absolute path under the vault and renders `NoteView`.
+- Sync handler dispatches by `entry.kind`: tasks vs notes get upsert calls accordingly. `removed` events call both `tasks.remove` and `notes.remove` (no-op if not present).
+- Layout: sidebar gains a "Notes" section under "Boards" with the recursive tree. `notes.loadFromVault(vault.path)` runs alongside `tasks.loadFromVault` and `boards.load`.
+- Tests: `src/lib/utils/notePath.test.ts` adds 10 tests covering relative-path stripping, href encode/decode round-trips, single-file trees, nested folders, sort order, and `.md` stripping for display names. Total now 26 → **35 JS tests** + 4 Rust tests, all passing.
 
 **Step 8 added:**
 - CodeMirror 6 packages: `codemirror`, `@codemirror/state`, `@codemirror/view`, `@codemirror/lang-markdown`, `@codemirror/theme-one-dark`.

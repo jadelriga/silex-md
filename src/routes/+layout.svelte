@@ -6,13 +6,17 @@
   import { vault } from "$lib/stores/vault.svelte";
   import { tasks } from "$lib/stores/tasks.svelte";
   import { boards } from "$lib/stores/boards.svelte";
+  import { notes } from "$lib/stores/notes.svelte";
   import { vaultApi } from "$lib/api/vault";
   import { startSync } from "$lib/sync";
   import VaultSetup from "$lib/components/VaultSetup.svelte";
   import TaskDetailPanel from "$lib/components/TaskDetailPanel.svelte";
+  import NotesTree from "$lib/components/NotesTree.svelte";
   import { fly } from "svelte/transition";
   import { quintOut } from "svelte/easing";
   import type { UnlistenFn } from "@tauri-apps/api/event";
+
+  let notesExpanded = $state(new Set<string>());
 
   const activeBoard = $derived(
     page.url.pathname.startsWith("/boards/")
@@ -32,6 +36,7 @@
   $effect(() => {
     if (vault.path) {
       tasks.loadFromVault(vault.path);
+      notes.loadFromVault(vault.path);
       boards.load(vault.path);
       vaultApi.watchVault(vault.path).catch((e) => console.error("watch_vault failed", e));
     }
@@ -68,30 +73,47 @@
           </p>
         {/if}
       </div>
-      <nav class="flex-1 overflow-y-auto p-2 text-sm">
-        <div class="px-2 py-1 text-xs uppercase tracking-wide text-neutral-500">Boards</div>
-        {#if !vault.path}
-          <div class="px-2 py-1 text-neutral-600 italic">No vault loaded</div>
-        {:else if !tasks.isLoaded}
-          <div class="px-2 py-1 text-neutral-600 italic">Loading…</div>
-        {:else if tasks.error}
-          <div class="px-2 py-1 text-red-400 text-xs">{tasks.error}</div>
-        {:else if boards.list.length === 0}
-          <div class="px-2 py-1 text-neutral-600 italic">No boards yet</div>
-        {:else}
-          {#each boards.list as board (board.name)}
-            <a
-              href="/boards/{encodeURIComponent(board.name)}"
-              class="block px-2 py-1 rounded truncate {activeBoard === board.name
-                ? 'bg-neutral-800 text-neutral-100'
-                : 'text-neutral-300 hover:bg-neutral-800/60'}"
-              title={board.name}
-            >
-              {board.name}
-              <span class="text-xs text-neutral-600">({board.columns.length})</span>
-            </a>
-          {/each}
-        {/if}
+      <nav class="flex-1 overflow-y-auto p-2 text-sm space-y-3">
+        <div>
+          <div class="px-2 py-1 text-xs uppercase tracking-wide text-neutral-500">Boards</div>
+          {#if !vault.path}
+            <div class="px-2 py-1 text-neutral-600 italic">No vault loaded</div>
+          {:else if !tasks.isLoaded}
+            <div class="px-2 py-1 text-neutral-600 italic">Loading…</div>
+          {:else if tasks.error}
+            <div class="px-2 py-1 text-red-400 text-xs">{tasks.error}</div>
+          {:else if boards.list.length === 0}
+            <div class="px-2 py-1 text-neutral-600 italic">No boards yet</div>
+          {:else}
+            {#each boards.list as board (board.name)}
+              <a
+                href="/boards/{encodeURIComponent(board.name)}"
+                class="block px-2 py-1 rounded truncate {activeBoard === board.name
+                  ? 'bg-neutral-800 text-neutral-100'
+                  : 'text-neutral-300 hover:bg-neutral-800/60'}"
+                title={board.name}
+              >
+                {board.name}
+                <span class="text-xs text-neutral-600">({board.columns.length})</span>
+              </a>
+            {/each}
+          {/if}
+        </div>
+
+        <div>
+          <div class="px-2 py-1 text-xs uppercase tracking-wide text-neutral-500">Notes</div>
+          {#if !vault.path}
+            <div class="px-2 py-1 text-neutral-600 italic">No vault loaded</div>
+          {:else if !notes.isLoaded}
+            <div class="px-2 py-1 text-neutral-600 italic">Loading…</div>
+          {:else if notes.error}
+            <div class="px-2 py-1 text-red-400 text-xs">{notes.error}</div>
+          {:else if notes.tree.length === 0}
+            <div class="px-2 py-1 text-neutral-600 italic">No notes yet</div>
+          {:else}
+            <NotesTree nodes={notes.tree} bind:expanded={notesExpanded} />
+          {/if}
+        </div>
       </nav>
     </aside>
     <main class="flex-1 overflow-auto">
