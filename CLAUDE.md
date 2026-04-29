@@ -66,8 +66,8 @@ Build this with integration tests **before** features on top.
 - [x] **10. Calendar view** — read-only over local due dates, behind `CalendarAdapter` interface
 - [x] **11. Notifications** — Tauri plugin + 15-minute interval, configurable lead time
 - [x] **12. Embedded terminal** — portable-pty + xterm.js (real PTY required, not piped stdio)
-- [ ] **13. Command palette** — `Cmd+P`, custom Svelte component
-- [ ] **14. Search overlay** — `Cmd+K`, in-memory, frontmatter + title only in v1
+- [x] **13. Command palette** — `Cmd+P`, custom Svelte component
+- [ ] **14. Search overlay** — `Cmd+Shift+F` (changed from spec's `Cmd+K` per user preference), in-memory, frontmatter + title only in v1
 - [ ] **15. Theming + keyboard shortcuts** — incremental throughout; CSS variables for theme swap
 
 ## Key decisions (and why)
@@ -91,7 +91,19 @@ Cloud sync. Multi-user. Mobile app. App Store distribution. Plugin system. Recur
 
 ## Current status
 
-**Step 12 complete.** Ready for step 13.
+**Step 13 complete.** Ready for step 14.
+
+**Step 13 added:**
+- `src/lib/utils/palette.ts` — `PaletteItem` type, `buildPaletteItems(sources)` builds the action list from boards/notes/tasks plus two static actions (go to calendar, toggle terminal). `filterPaletteItems(items, query, limit=30)` does case-insensitive multi-token AND-substring matching against each item's `search` string. Both are pure functions.
+- `src/lib/components/CommandPalette.svelte` — overlay UI: 32rem dark card centered horizontally at 15vh from the top, backdrop blur, autofocused input, scrollable list (max-h 50vh) with kind pills (board / note / task / action) color-coded. Arrow keys navigate (wraps), `Enter` runs the selected item, `Esc` and backdrop-click close. `bind:this={inputEl}` is a `$state` ref so `tick().then(() => inputEl?.focus())` works on open.
+- `⌘P` (no shift) toggles the palette via the layout's existing global keydown handler. The Esc → close-task-panel branch now also checks `!ui.paletteOpen` so opening the palette while a task is open doesn't fight over Esc.
+- 11 new tests in `src/lib/utils/palette.test.ts` covering item construction (always-present actions, board/task/note shapes, run-callback behavior, vault-path gating for notes) and filtering (empty query, case insensitivity, multi-token AND, limit). Total now **54 JS tests** + 4 Rust tests, all passing.
+
+**Step 13 deferrals:**
+- Create-new-* actions ("New task", "New note", "New board") — no creation UI exists anywhere yet, so plumbing them into the palette would require building the create flows first. Treat as a follow-up once we add those flows.
+- Settings + theme switching — neither exists yet.
+- Fuzzy matching. Substring matching is fine for the current vault size; if it ever feels slow or imprecise, swap in a small fuzzy lib (`fzf`, `fuse.js`).
+- Recent-items pinning to the top.
 
 **Step 12 added:**
 - Rust crate `portable-pty` (the wezterm-pedigree cross-platform PTY).

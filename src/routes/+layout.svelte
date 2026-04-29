@@ -14,6 +14,7 @@
   import TaskDetailPanel from "$lib/components/TaskDetailPanel.svelte";
   import NotesTree from "$lib/components/NotesTree.svelte";
   import Terminal from "$lib/components/Terminal.svelte";
+  import CommandPalette from "$lib/components/CommandPalette.svelte";
   import { fly } from "svelte/transition";
   import { quintOut } from "svelte/easing";
   import type { UnlistenFn } from "@tauri-apps/api/event";
@@ -83,7 +84,12 @@
         ui.terminalOpen = !ui.terminalOpen;
         return;
       }
-      if (e.key === "Escape" && ui.openTaskPath) {
+      if ((e.metaKey || e.ctrlKey) && !e.shiftKey && e.key.toLowerCase() === "p") {
+        e.preventDefault();
+        ui.paletteOpen = !ui.paletteOpen;
+        return;
+      }
+      if (e.key === "Escape" && ui.openTaskPath && !ui.paletteOpen) {
         ui.openTaskPath = null;
       }
     };
@@ -198,6 +204,8 @@
 {#if vault.isLoaded && !vault.path}
   <VaultSetup />
 {/if}
+
+<CommandPalette />
 
 {#if ui.openTaskPath}
   <div
