@@ -202,6 +202,111 @@ pub async fn delete_task(path: String) -> Result<(), String> {
 }
 
 #[tauri::command]
+pub async fn create_board(vault_path: String, name: String) -> Result<String, String> {
+    do_create_board(Path::new(&vault_path), &name)
+        .map(|p| p.to_string_lossy().into_owned())
+}
+
+#[tauri::command]
+pub async fn create_note_folder(
+    vault_path: String,
+    relative_path: String,
+) -> Result<String, String> {
+    do_create_note_folder(Path::new(&vault_path), &relative_path)
+        .map(|p| p.to_string_lossy().into_owned())
+}
+
+#[tauri::command]
+pub async fn create_note(vault_path: String, relative_path: String) -> Result<String, String> {
+    do_create_note(Path::new(&vault_path), &relative_path)
+        .map(|p| p.to_string_lossy().into_owned())
+}
+
+fn do_create_board(vault: &Path, name: &str) -> Result<PathBuf, String> {
+    let trimmed = name.trim();
+    if trimmed.is_empty() {
+        return Err("Board name cannot be empty".to_string());
+    }
+    if trimmed.contains('/') || trimmed.contains("..") {
+        return Err("Board name cannot contain '/' or '..'".to_string());
+    }
+    let board_path = vault.join("boards").join(trimmed);
+    if board_path.exists() {
+        return Err(format!("Board '{}' already exists", trimmed));
+    }
+    let backlog = board_path.join("backlog");
+    fs::create_dir_all(&backlog).map_err(|e| e.to_string())?;
+    Ok(board_path)
+}
+
+fn do_create_note_folder(vault: &Path, relative_path: &str) -> Result<PathBuf, String> {
+    let segments = validate_note_relative(relative_path)?;
+    if segments.is_empty() {
+        return Err("Folder path cannot be empty".to_string());
+    }
+    let mut folder_path = vault.to_path_buf();
+    for seg in &segments {
+        folder_path.push(seg);
+    }
+    if folder_path.exists() {
+        return Err(format!("Folder already exists: {}", relative_path));
+    }
+    fs::create_dir_all(&folder_path).map_err(|e| e.to_string())?;
+    Ok(folder_path)
+}
+
+fn do_create_note(vault: &Path, relative_path: &str) -> Result<PathBuf, String> {
+    let segments = validate_note_relative(relative_path)?;
+    if segments.is_empty() {
+        return Err("Note path cannot be empty".to_string());
+    }
+    let mut path = vault.to_path_buf();
+    for seg in &segments {
+        path.push(seg);
+    }
+    if path.extension().and_then(|e| e.to_str()) != Some("md") {
+        let mut new_name = path
+            .file_name()
+            .map(|n| n.to_string_lossy().into_owned())
+            .unwrap_or_default();
+        new_name.push_str(".md");
+        path.set_file_name(new_name);
+    }
+    if path.exists() {
+        return Err(format!("Note already exists: {}", path.display()));
+    }
+    if let Some(parent) = path.parent() {
+        fs::create_dir_all(parent).map_err(|e| e.to_string())?;
+    }
+    fs::write(&path, "").map_err(|e| e.to_string())?;
+    Ok(path)
+}
+
+fn validate_note_relative(relative_path: &str) -> Result<Vec<String>, String> {
+    let trimmed = relative_path.trim();
+    if trimmed.is_empty() {
+        return Err("Path cannot be empty".to_string());
+    }
+    if trimmed.starts_with('/') {
+        return Err("Path must be relative (no leading '/')".to_string());
+    }
+    let segments: Vec<String> = trimmed
+        .split('/')
+        .filter(|s| !s.is_empty())
+        .map(|s| s.to_string())
+        .collect();
+    for seg in &segments {
+        if seg == ".." || seg == "." {
+            return Err("Path cannot contain '.' or '..' segments".to_string());
+        }
+    }
+    if segments.first().map(|s| s.as_str()) == Some("boards") {
+        return Err("Notes cannot live under '/boards'".to_string());
+    }
+    Ok(segments)
+}
+
+#[tauri::command]
 pub async fn watch_vault(
     app: AppHandle,
     state: State<'_, WatcherState>,
@@ -377,5 +482,98 @@ mod tests {
         assert_eq!(entry.kind, "note");
         assert!(entry.board.is_none());
         assert!(entry.column.is_none());
+    }
+
+    #[test]
+    fn create_board_creates_board_with_default_backlog_column() {
+        let dir = tempfile::tempdir().unwrap();
+        let result = do_create_board(dir.path(), "my-board").unwrap();
+        assert_eq!(result, dir.path().join("boards").join("my-board"));
+        assert!(dir.path().join("boards").join("my-board").join("backlog").is_dir());
+    }
+
+    #[test]
+    fn create_board_rejects_empty_name() {
+        let dir = tempfile::tempdir().unwrap();
+        assert!(do_create_board(dir.path(), "  ").is_err());
+    }
+
+    #[test]
+    fn create_board_rejects_slashes_and_dotdot() {
+        let dir = tempfile::tempdir().unwrap();
+        assert!(do_create_board(dir.path(), "foo/bar").is_err());
+        assert!(do_create_board(dir.path(), "..").is_err());
+    }
+
+    #[test]
+    fn create_board_rejects_duplicates() {
+        let dir = tempfile::tempdir().unwrap();
+        do_create_board(dir.path(), "alpha").unwrap();
+        let err = do_create_board(dir.path(), "alpha").unwrap_err();
+        assert!(err.contains("already exists"));
+    }
+
+    #[test]
+    fn create_note_folder_creates_nested_dirs() {
+        let dir = tempfile::tempdir().unwrap();
+        let result = do_create_note_folder(dir.path(), "journal/2026").unwrap();
+        assert_eq!(result, dir.path().join("journal").join("2026"));
+        assert!(dir.path().join("journal").join("2026").is_dir());
+    }
+
+    #[test]
+    fn create_note_folder_rejects_paths_with_dotdot() {
+        let dir = tempfile::tempdir().unwrap();
+        assert!(do_create_note_folder(dir.path(), "../escape").is_err());
+        assert!(do_create_note_folder(dir.path(), "foo/../bar").is_err());
+    }
+
+    #[test]
+    fn create_note_folder_rejects_paths_under_boards() {
+        let dir = tempfile::tempdir().unwrap();
+        assert!(do_create_note_folder(dir.path(), "boards/x").is_err());
+    }
+
+    #[test]
+    fn create_note_appends_md_extension_when_missing() {
+        let dir = tempfile::tempdir().unwrap();
+        let result = do_create_note(dir.path(), "scratch").unwrap();
+        assert_eq!(result, dir.path().join("scratch.md"));
+        assert!(dir.path().join("scratch.md").is_file());
+    }
+
+    #[test]
+    fn create_note_keeps_md_extension_when_present() {
+        let dir = tempfile::tempdir().unwrap();
+        let result = do_create_note(dir.path(), "ideas.md").unwrap();
+        assert_eq!(result, dir.path().join("ideas.md"));
+    }
+
+    #[test]
+    fn create_note_replaces_other_extensions_with_md() {
+        let dir = tempfile::tempdir().unwrap();
+        let result = do_create_note(dir.path(), "thing.txt").unwrap();
+        assert_eq!(result, dir.path().join("thing.txt.md"));
+    }
+
+    #[test]
+    fn create_note_creates_intermediate_dirs() {
+        let dir = tempfile::tempdir().unwrap();
+        do_create_note(dir.path(), "journal/april/29").unwrap();
+        assert!(dir.path().join("journal").join("april").join("29.md").is_file());
+    }
+
+    #[test]
+    fn create_note_rejects_duplicates() {
+        let dir = tempfile::tempdir().unwrap();
+        do_create_note(dir.path(), "a").unwrap();
+        let err = do_create_note(dir.path(), "a").unwrap_err();
+        assert!(err.contains("already exists"));
+    }
+
+    #[test]
+    fn create_note_rejects_paths_under_boards() {
+        let dir = tempfile::tempdir().unwrap();
+        assert!(do_create_note(dir.path(), "boards/foo").is_err());
     }
 }

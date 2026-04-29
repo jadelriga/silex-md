@@ -23,6 +23,7 @@
       openTask: (path) => (ui.openTaskPath = path),
       toggleTerminal: () => (ui.terminalOpen = !ui.terminalOpen),
       setThemePref: (pref) => void theme.setPref(pref),
+      startCreating: (kind) => (ui.creating = kind),
     }),
   );
 

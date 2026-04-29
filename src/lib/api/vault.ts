@@ -45,4 +45,13 @@ export const vaultApi = {
   readBodies(vaultPath: string): Promise<Record<string, string>> {
     return invoke("read_bodies", { vaultPath });
   },
+  createBoard(vaultPath: string, name: string): Promise<string> {
+    return invoke("create_board", { vaultPath, name });
+  },
+  createNoteFolder(vaultPath: string, relativePath: string): Promise<string> {
+    return invoke("create_note_folder", { vaultPath, relativePath });
+  },
+  createNote(vaultPath: string, relativePath: string): Promise<string> {
+    return invoke("create_note", { vaultPath, relativePath });
+  },
 };

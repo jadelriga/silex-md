@@ -18,6 +18,9 @@
   import Terminal from "$lib/components/Terminal.svelte";
   import CommandPalette from "$lib/components/CommandPalette.svelte";
   import SearchOverlay from "$lib/components/SearchOverlay.svelte";
+  import CreateInput from "$lib/components/CreateInput.svelte";
+  import { goto } from "$app/navigation";
+  import { noteHref, noteRelativePath } from "$lib/utils/notePath";
   import { fly } from "svelte/transition";
   import { quintOut } from "svelte/easing";
   import type { UnlistenFn } from "@tauri-apps/api/event";
@@ -127,6 +130,28 @@
   function basename(p: string) {
     return p.split("/").filter(Boolean).pop() ?? p;
   }
+
+  async function handleCreateBoard(name: string) {
+    if (!vault.path) return;
+    await vaultApi.createBoard(vault.path, name);
+    ui.creating = null;
+    await boards.load(vault.path);
+    goto(`/boards/${encodeURIComponent(name)}`);
+  }
+
+  async function handleCreateNote(relativePath: string) {
+    if (!vault.path) return;
+    const absolute = await vaultApi.createNote(vault.path, relativePath);
+    ui.creating = null;
+    const rel = noteRelativePath(absolute, vault.path);
+    goto(noteHref(rel));
+  }
+
+  async function handleCreateNoteFolder(relativePath: string) {
+    if (!vault.path) return;
+    await vaultApi.createNoteFolder(vault.path, relativePath);
+    ui.creating = null;
+  }
 </script>
 
 <div class="flex flex-col h-screen w-screen overflow-hidden bg-surface text-fg">
@@ -167,7 +192,28 @@
         </div>
 
         <div>
-          <div class="px-2 py-1 text-xs uppercase tracking-wide text-fg-subtle">Boards</div>
+          <div class="group px-2 py-1 flex items-center justify-between">
+            <span class="text-xs uppercase tracking-wide text-fg-subtle">Boards</span>
+            {#if vault.path}
+              <button
+                onclick={() => (ui.creating = "board")}
+                title="New board"
+                aria-label="New board"
+                class="opacity-0 group-hover:opacity-100 transition-opacity text-fg-subtle hover:text-fg"
+              >
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4">
+                  <path d="M12 5v14M5 12h14" stroke-linecap="round" />
+                </svg>
+              </button>
+            {/if}
+          </div>
+          {#if ui.creating === "board"}
+            <CreateInput
+              placeholder="board name"
+              onSubmit={handleCreateBoard}
+              onCancel={() => (ui.creating = null)}
+            />
+          {/if}
           {#if !vault.path}
             <div class="px-2 py-1 text-fg-faint italic">No vault loaded</div>
           {:else if !tasks.isLoaded}
@@ -193,7 +239,54 @@
         </div>
 
         <div>
-          <div class="px-2 py-1 text-xs uppercase tracking-wide text-fg-subtle">Notes</div>
+          <div class="group px-2 py-1 flex items-center justify-between">
+            <span class="text-xs uppercase tracking-wide text-fg-subtle">Notes</span>
+            {#if vault.path}
+              <div class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                <button
+                  onclick={() => (ui.creating = "folder")}
+                  title="New folder"
+                  aria-label="New folder"
+                  class="text-fg-subtle hover:text-fg"
+                >
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4">
+                    <path
+                      d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7z"
+                      stroke-linejoin="round"
+                    />
+                    <path d="M12 11v4M10 13h4" stroke-linecap="round" />
+                  </svg>
+                </button>
+                <button
+                  onclick={() => (ui.creating = "note")}
+                  title="New note"
+                  aria-label="New note"
+                  class="text-fg-subtle hover:text-fg"
+                >
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4">
+                    <path
+                      d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8l-5-5z"
+                      stroke-linejoin="round"
+                    />
+                    <path d="M14 3v5h5M12 12v6M9 15h6" stroke-linecap="round" />
+                  </svg>
+                </button>
+              </div>
+            {/if}
+          </div>
+          {#if ui.creating === "folder"}
+            <CreateInput
+              placeholder="folder or path/to/folder"
+              onSubmit={handleCreateNoteFolder}
+              onCancel={() => (ui.creating = null)}
+            />
+          {:else if ui.creating === "note"}
+            <CreateInput
+              placeholder="note.md or path/to/note"
+              onSubmit={handleCreateNote}
+              onCancel={() => (ui.creating = null)}
+            />
+          {/if}
           {#if !vault.path}
             <div class="px-2 py-1 text-fg-faint italic">No vault loaded</div>
           {:else if !notes.isLoaded}

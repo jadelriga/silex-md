@@ -115,6 +115,31 @@ describe("buildPaletteItems", () => {
     items.find((i) => i.id === "action:theme-light")?.run();
     expect(setThemePref).toHaveBeenCalledWith("light");
   });
+
+  it("emits create actions when startCreating is provided", () => {
+    const startCreating = vi.fn();
+    const items = buildPaletteItems(makeSources({ startCreating }));
+    const ids = items.map((i) => i.id);
+    expect(ids).toEqual(
+      expect.arrayContaining(["action:new-board", "action:new-note", "action:new-folder"]),
+    );
+  });
+
+  it("running a create action calls startCreating with the right kind", () => {
+    const startCreating = vi.fn();
+    const items = buildPaletteItems(makeSources({ startCreating }));
+    items.find((i) => i.id === "action:new-board")?.run();
+    items.find((i) => i.id === "action:new-note")?.run();
+    items.find((i) => i.id === "action:new-folder")?.run();
+    expect(startCreating).toHaveBeenNthCalledWith(1, "board");
+    expect(startCreating).toHaveBeenNthCalledWith(2, "note");
+    expect(startCreating).toHaveBeenNthCalledWith(3, "folder");
+  });
+
+  it("omits create actions when startCreating is not provided", () => {
+    const items = buildPaletteItems(makeSources({}));
+    expect(items.find((i) => i.id === "action:new-board")).toBeUndefined();
+  });
 });
 
 describe("filterPaletteItems", () => {

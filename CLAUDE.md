@@ -336,8 +336,10 @@ Cloud sync. Multi-user. Mobile app. App Store distribution. Plugin system. Recur
 
 **Polish queue (small targeted follow-ups, not blocking main steps):**
 - **Custom column order per board.** Currently columns render alphabetically (`backlog`, `done`, `in-progress`), which puts done before in-progress. Fix: introduce a per-board metadata file (e.g. `_silex.json` at `<vault>/boards/<board>/_silex.json`) holding `{ "columns": ["backlog", "in-progress", "done"] }`. Have `list_boards` read it; columns not in the file go after the listed ones, alphabetical. Falls back gracefully when the file is missing.
-- Add card / column / board UI affordances.
-- Delete card / column / board UI affordances.
+- ~~Add board / note / notes-folder UI affordances~~ Shipped: hover-revealed `+` icon next to "BOARDS" creates a board (with a default `backlog` column); two icons next to "NOTES" create a note or a folder. Inline-input pattern (`CreateInput.svelte`) handles Enter/Esc/blur. Three command-palette actions ("New board…", "New note…", "New notes folder…") set `ui.creating` to focus the same sidebar input. Backed by Rust commands `create_board` / `create_note` / `create_note_folder` with path-traversal validation, conflict detection, and 13 Rust tests.
+- Add card / new-column UI affordances (still pending).
+- Delete card / column / board / note / folder UI affordances (still pending).
+- Rename UI for any of the above (still pending).
 - **Time-based reminders** (separate from due-date notifications). Add a `reminders` array per task with `{ at: "2026-05-10T14:30", notified?: bool }`, schedule via the OS-level scheduling API of `tauri-plugin-notification` (so reminders fire even when the app is closed) or extend our in-app scheduler with finer granularity. Reuses the permission flow and notification-sending plumbing from step 11.
 - **Terminal font with broader glyph coverage.** Current font (`ui-monospace, "SF Mono", Menlo, monospace`) lacks some special characters used by Claude Code and other TUI tools (rendered as `?`). Options: bundle a Nerd Font, use JetBrains Mono / Fira Code via `@fontsource`, or add a settings field where the user picks their preferred terminal font. Easy win once we have a settings UI.
 - **Persist terminal panel height** across app restarts via the Tauri store plugin. Right now it resets to 240px each launch.

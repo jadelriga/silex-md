@@ -21,6 +21,7 @@ export interface PaletteSources {
   openTask: (path: string) => void;
   toggleTerminal: () => void;
   setThemePref?: (pref: "system" | "light" | "dark") => void;
+  startCreating?: (kind: "board" | "note" | "folder") => void;
 }
 
 export function buildPaletteItems(s: PaletteSources): PaletteItem[] {
@@ -65,6 +66,31 @@ export function buildPaletteItems(s: PaletteSources): PaletteItem[] {
       label: "Theme: Dark",
       search: "theme dark action",
       run: () => setThemePref("dark"),
+    });
+  }
+
+  if (s.startCreating) {
+    const startCreating = s.startCreating;
+    items.push({
+      id: "action:new-board",
+      kind: "action",
+      label: "New board…",
+      search: "new board create action",
+      run: () => startCreating("board"),
+    });
+    items.push({
+      id: "action:new-note",
+      kind: "action",
+      label: "New note…",
+      search: "new note create action",
+      run: () => startCreating("note"),
+    });
+    items.push({
+      id: "action:new-folder",
+      kind: "action",
+      label: "New notes folder…",
+      search: "new folder notes create action",
+      run: () => startCreating("folder"),
     });
   }
 
