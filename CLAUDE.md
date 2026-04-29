@@ -63,7 +63,7 @@ Build this with integration tests **before** features on top.
 - [x] **7. Kanban board** — svelte-dnd-action, file moves on drop, fractional-indexing for order
 - [x] **8. Task detail panel** — lazy body load, CodeMirror 6 editor, debounced autosave (300ms), dirty-state tracking, conflict banner
 - [x] **9. Notes** — sidebar tree + full-area editor, same sync loop. Wikilinks/backlinks deferred to post-v1.
-- [ ] **10. Calendar view** — read-only over local due dates, behind `CalendarAdapter` interface
+- [x] **10. Calendar view** — read-only over local due dates, behind `CalendarAdapter` interface
 - [ ] **11. Notifications** — Tauri plugin + 15-minute interval, configurable lead time
 - [ ] **12. Embedded terminal** — portable-pty + xterm.js (real PTY required, not piped stdio)
 - [ ] **13. Command palette** — `Cmd+P`, custom Svelte component
@@ -91,7 +91,15 @@ Cloud sync. Multi-user. Mobile app. App Store distribution. Plugin system. Recur
 
 ## Current status
 
-**Step 9 complete.** Ready for step 10.
+**Step 10 complete.** Ready for step 11.
+
+**Step 10 added:**
+- `@event-calendar/core` and `@event-calendar/day-grid` installed (Svelte 5 native, lightweight).
+- `src/lib/calendar/CalendarAdapter.ts` — `CalendarEventInput` and `CalendarView` types. The "adapter" is conceptual: only `Calendar.svelte` imports the underlying lib, so swapping is a one-file change.
+- `src/lib/calendar/event-calendar.d.ts` — module declarations since the package ships no types.
+- `src/lib/components/Calendar.svelte` — wraps `createCalendar`/`destroyCalendar`. Options is a `$state` proxy so EC's internal options-diff effect picks up changes; `$effect` rewrites `calOptions.events` whenever the parent's events prop changes. `.ec-dark` class enables EC's built-in dark theme; small CSS overrides push background/borders to match the rest of the app.
+- `src/routes/calendar/+page.svelte` — derives events from `tasks.entries` (only those with a `due` frontmatter field). Title falls back to filename. Priority maps to event color (high=red, medium=amber, low=blue, none=neutral). Clicking an event sets `ui.openTaskPath`, opening the detail panel over the calendar.
+- Layout: new "Calendar" link at the top of the sidebar nav, with active highlighting.
 
 **Step 9 added:**
 - `src/lib/utils/notePath.ts` — `noteRelativePath`, `noteHref`, `decodeNoteRouteParam`, plus `buildNoteTree` that turns a flat list of `VaultEntry` into a folder tree with files. Folders sort before files at each level, alphabetical. The display name strips `.md`; the relative path keeps it.
@@ -219,6 +227,7 @@ Cloud sync. Multi-user. Mobile app. App Store distribution. Plugin system. Recur
 - **Custom column order per board.** Currently columns render alphabetically (`backlog`, `done`, `in-progress`), which puts done before in-progress. Fix: introduce a per-board metadata file (e.g. `_silex.json` at `<vault>/boards/<board>/_silex.json`) holding `{ "columns": ["backlog", "in-progress", "done"] }`. Have `list_boards` read it; columns not in the file go after the listed ones, alphabetical. Falls back gracefully when the file is missing.
 - Add card / column / board UI affordances.
 - Delete card / column / board UI affordances.
+- **Calendar doesn't fill the available height.** The grid renders ~5 rows of natural height and leaves the area below empty. Things tried that didn't fix it: setting `height: '100%'` on the EC options, making `<main>` a flex column with `flex flex-col min-w-0`, changing the wrapper from `h-full` to `flex-1 min-h-0`, making the wrapper itself a flex column with `.ec { flex: 1 1 0%; min-height: 0 }`. EC's mounted `.ec` element seems to internally cap at content height regardless of parent. Worth investigating EC's source for how it sizes month-view rows (it may compute row height from a separate `--ec-day-height` or auto-size based on visible cells). If we adopt week view too, this might naturally fix itself with `height: 'auto'` plus an aspect ratio. Tackle this when we revisit calendar polish.
 
 ## Markdown editor alternatives
 

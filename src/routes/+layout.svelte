@@ -75,6 +75,17 @@
       </div>
       <nav class="flex-1 overflow-y-auto p-2 text-sm space-y-3">
         <div>
+          <a
+            href="/calendar"
+            class="block px-2 py-1 rounded {page.url.pathname === '/calendar'
+              ? 'bg-neutral-800 text-neutral-100'
+              : 'text-neutral-300 hover:bg-neutral-800/60'}"
+          >
+            Calendar
+          </a>
+        </div>
+
+        <div>
           <div class="px-2 py-1 text-xs uppercase tracking-wide text-neutral-500">Boards</div>
           {#if !vault.path}
             <div class="px-2 py-1 text-neutral-600 italic">No vault loaded</div>
@@ -116,7 +127,7 @@
         </div>
       </nav>
     </aside>
-    <main class="flex-1 overflow-auto">
+    <main class="flex-1 overflow-auto flex flex-col min-w-0">
       {@render children()}
     </main>
   </div>

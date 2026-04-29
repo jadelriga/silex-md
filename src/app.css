@@ -1,5 +1,6 @@
 @import "tailwindcss";
 @plugin "@tailwindcss/typography";
+@import "@event-calendar/core/index.css";
 
 @layer base {
   button:not(:disabled) {
