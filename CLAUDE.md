@@ -117,7 +117,7 @@ Forward-looking grouping of remaining post-v1 polish work. Each phase is roughly
 ### Phase 2 — Foundation polish
 - [x] **Persist terminal panel height** — already wired in step 15 iter 2: `settings.load()` reads `terminalHeight` on mount, drag-resize clamps to `[80, innerHeight - 120]` and saves on `mouseup` via `setTerminalHeight` → `store.save()`. Default 240px when unset; no flash since terminal is closed by default at launch.
 - [x] **Scaffold cleanup.** Removed `static/vite.svg`, `tauri.svg`, `svelte.svg` (unreferenced demo assets) and `tauri-plugin-opener` (Cargo.toml, lib.rs, `default.json` capability, `@tauri-apps/plugin-opener` npm dep).
-- [ ] **SILEX home banner.** Replace the Unicode box-drawing ASCII with an SVG (or a sized custom font) that aligns reliably across platforms.
+- [x] **SILEX home banner.** Closed without changes — the existing Unicode box-drawing banner is acceptable. Revisit if it ever looks broken on a target platform.
 
 ### Phase 3 — Settings + terminal quality of life
 - [ ] **Settings editor UI.** Surface `themePref`, `terminalHeight`, future `notificationLeadTime`, terminal font, etc. Either a route (`/settings`) or a dialog. Backed by the existing `settings.svelte.ts` store.
