@@ -115,7 +115,7 @@ Forward-looking grouping of remaining post-v1 polish work. Each phase is roughly
 - [ ] **Iter 2 — Rename.** Inline rename for board (sidebar), column (header), note folder (sidebar). Card / note / reminder titles already editable in detail panel / NoteView, so rename for those is the title field — context menu just focuses it. Rust `rename_path` (or extend `move_task`) with conflict detection; board/column rename keeps `_silex.json` in sync.
 
 ### Phase 2 — Foundation polish
-- [ ] **Persist terminal panel height** across restarts (extend `settings.svelte.ts` — already does this; check it actually works after light-theme iter 2 landed).
+- [x] **Persist terminal panel height** — already wired in step 15 iter 2: `settings.load()` reads `terminalHeight` on mount, drag-resize clamps to `[80, innerHeight - 120]` and saves on `mouseup` via `setTerminalHeight` → `store.save()`. Default 240px when unset; no flash since terminal is closed by default at launch.
 - [x] **Scaffold cleanup.** Removed `static/vite.svg`, `tauri.svg`, `svelte.svg` (unreferenced demo assets) and `tauri-plugin-opener` (Cargo.toml, lib.rs, `default.json` capability, `@tauri-apps/plugin-opener` npm dep).
 - [ ] **SILEX home banner.** Replace the Unicode box-drawing ASCII with an SVG (or a sized custom font) that aligns reliably across platforms.
 
