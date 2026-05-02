@@ -6,6 +6,7 @@
   import { vaultApi, type VaultEntry } from "$lib/api/vault";
   import { sortCards, getOrder } from "$lib/utils/order";
   import { buildTaskContent } from "$lib/utils/yaml";
+  import { confirm } from "$lib/stores/confirm.svelte";
   import Column from "./Column.svelte";
   import CreateInput from "./CreateInput.svelte";
 
@@ -177,6 +178,40 @@
     const newOrder = generateKeyBetween(lastOrder, null);
     await vaultApi.createTask(vault.path, name, columnName, title, newOrder);
   }
+
+  async function handleRenameColumn(columnName: string, newName: string) {
+    if (!vault.path) return;
+    if (newName.includes("/") || newName.includes("..")) {
+      throw new Error("Column name cannot contain '/' or '..'");
+    }
+    await vaultApi.renameColumn(vault.path, name, columnName, newName);
+    await tasks.loadFromVault(vault.path);
+    await boards.load(vault.path);
+  }
+
+  function handleDeleteColumn(columnName: string) {
+    if (!vault.path) return;
+    const cards = columnsState[columnName] ?? [];
+    const cardCount = cards.length;
+    const detail =
+      cardCount > 0
+        ? `The column and its ${cardCount} card${cardCount === 1 ? "" : "s"} will be moved to the Trash.`
+        : "The column will be moved to the Trash.";
+    confirm.ask({
+      title: `Delete column "${columnName}"?`,
+      message: detail,
+      confirmLabel: "Move to Trash",
+      danger: true,
+      onConfirm: async () => {
+        if (!vault.path) return;
+        for (const card of cards) {
+          tasks.remove(card.path);
+        }
+        await vaultApi.deleteColumn(vault.path, name, columnName);
+        await boards.load(vault.path);
+      },
+    });
+  }
 </script>
 
 <div class="flex h-full overflow-x-auto overflow-y-hidden gap-3 p-3">
@@ -194,6 +229,8 @@
       onHeaderDragLeave={() => onColumnDragLeave(colName)}
       onHeaderDrop={(e) => onColumnDrop(e, colName)}
       onAddTask={(title) => handleAddTask(colName, title)}
+      onDeleteColumn={() => handleDeleteColumn(colName)}
+      onRenameColumn={(newName) => handleRenameColumn(colName, newName)}
     />
   {/each}
 

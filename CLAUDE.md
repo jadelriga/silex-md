@@ -106,6 +106,34 @@ Steps 1–3 are this iteration; user reviews; then 4–6 in the next.
 
 Cloud sync. Multi-user. Mobile app. App Store distribution. Plugin system. Recurring calendar events. Full-text body search (frontmatter + title only). External calendar sync (Google, etc.). Encrypted secrets storage.
 
+## Phased backlog plan
+
+Forward-looking grouping of remaining post-v1 polish work. Each phase is roughly one sitting; iterations within a phase are commit boundaries. Update the checkboxes as items land; move shipped detail into "Current status".
+
+### Phase 1 — Right-click affordances + delete + rename
+- [x] **Iter 1 — Primitives + delete.** `withContextMenu` Svelte action, `contextMenu` singleton store, `ContextMenu.svelte` overlay (auto-flip), `confirm` singleton store, `ConfirmDialog.svelte`. Rust `delete_path` (soft-delete via `trash` crate) and `delete_column` (also rewrites `_silex.json`). Wired Delete… on boards, columns, cards, notes, note folders, reminders.
+- [ ] **Iter 2 — Rename.** Inline rename for board (sidebar), column (header), note folder (sidebar). Card / note / reminder titles already editable in detail panel / NoteView, so rename for those is the title field — context menu just focuses it. Rust `rename_path` (or extend `move_task`) with conflict detection; board/column rename keeps `_silex.json` in sync.
+
+### Phase 2 — Foundation polish
+- [ ] **Persist terminal panel height** across restarts (extend `settings.svelte.ts` — already does this; check it actually works after light-theme iter 2 landed).
+- [ ] **Scaffold cleanup.** Remove `static/vite.svg`, `tauri.svg`, `svelte.svg`, the `tauri-plugin-opener` plugin (Cargo.toml + lib.rs + capabilities) since it's unused.
+- [ ] **SILEX home banner.** Replace the Unicode box-drawing ASCII with an SVG (or a sized custom font) that aligns reliably across platforms.
+
+### Phase 3 — Settings + terminal quality of life
+- [ ] **Settings editor UI.** Surface `themePref`, `terminalHeight`, future `notificationLeadTime`, terminal font, etc. Either a route (`/settings`) or a dialog. Backed by the existing `settings.svelte.ts` store.
+- [ ] **Terminal glyph coverage.** Bundle a Nerd Font (or JetBrains Mono via `@fontsource`), make font configurable in settings.
+- [ ] **Persistent terminal session.** Hoist `<Terminal />` mount above the `{#if ui.terminalOpen}` so toggling the panel doesn't kill the PTY (use `display: none` to hide).
+
+### Phase 4 — Search + calendar polish
+- [ ] **Highlight search matches** in title and snippet (wrap matched substrings in a styled span).
+- [ ] **Search filter chips** — board / kind / priority / tags / due range. Infrastructure already in `searchEntries`; needs UI.
+- [ ] **Calendar fills available height.** Investigate EC's row sizing (`--ec-day-height` or similar); see notes in current status.
+
+### Phase 5 — Keyboard + notification UX
+- [ ] **Quick-create shortcuts.** `Cmd+N` new task in active board, `Cmd+Shift+N` new note. Reuse the existing inline-create flow.
+- [ ] **Click-notification → focus task.** Wire `tauri-plugin-notification` action API: payload includes the task path, click handler sets `ui.openTaskPath`.
+- [ ] **Arrow-key card nav** on the board. Non-trivial focus model with svelte-dnd-action — likely needs a dedicated focus-ring abstraction.
+
 ## Current status
 
 **Step 15 (and the last numbered step) complete.** Implementation order is finished. Polish queue and follow-ups remain.

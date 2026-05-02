@@ -22,6 +22,11 @@
   import CommandPalette from "$lib/components/CommandPalette.svelte";
   import SearchOverlay from "$lib/components/SearchOverlay.svelte";
   import CreateInput from "$lib/components/CreateInput.svelte";
+  import RenameInput from "$lib/components/RenameInput.svelte";
+  import ContextMenu from "$lib/components/ContextMenu.svelte";
+  import ConfirmDialog from "$lib/components/ConfirmDialog.svelte";
+  import { withContextMenu } from "$lib/utils/contextMenu";
+  import { confirm } from "$lib/stores/confirm.svelte";
   import { goto } from "$app/navigation";
   import { noteHref, noteRelativePath } from "$lib/utils/notePath";
   import { ask } from "@tauri-apps/plugin-dialog";
@@ -30,6 +35,7 @@
   import type { UnlistenFn } from "@tauri-apps/api/event";
 
   let notesExpanded = $state(new Set<string>());
+  let renamingBoard = $state<string | null>(null);
 
   function startTerminalResize(e: MouseEvent) {
     e.preventDefault();
@@ -174,6 +180,43 @@
     await notes.refreshFolders();
   }
 
+  function deleteBoard(boardName: string) {
+    if (!vault.path) return;
+    const boardPath = `${vault.path}/boards/${boardName}`;
+    confirm.ask({
+      title: `Delete board "${boardName}"?`,
+      message: `This will move the entire board, including all its columns and cards, to the Trash. You can restore it from there if needed.`,
+      confirmLabel: "Move to Trash",
+      danger: true,
+      onConfirm: async () => {
+        await vaultApi.deletePath(boardPath);
+        if (vault.path) await boards.load(vault.path);
+      },
+    });
+  }
+
+  async function handleRenameBoard(oldName: string, newName: string) {
+    if (!vault.path) return;
+    if (newName.includes("/") || newName.includes("..")) {
+      throw new Error("Board name cannot contain '/' or '..'");
+    }
+    const from = `${vault.path}/boards/${oldName}`;
+    const to = `${vault.path}/boards/${newName}`;
+    if (from === to) {
+      renamingBoard = null;
+      return;
+    }
+    await vaultApi.movePath(from, to);
+    renamingBoard = null;
+    if (vault.path) {
+      await boards.load(vault.path);
+      await tasks.loadFromVault(vault.path);
+    }
+    if (activeBoard === oldName) {
+      goto(`/boards/${encodeURIComponent(newName)}`);
+    }
+  }
+
   function onNotesRootDragOver(e: DragEvent) {
     if (!ui.notesDrag) return;
     e.preventDefault();
@@ -284,16 +327,34 @@
             <div class="px-2 py-1 text-fg-faint italic">No boards yet</div>
           {:else}
             {#each boards.list as board (board.name)}
-              <a
-                href="/boards/{encodeURIComponent(board.name)}"
-                class="block px-2 py-1 rounded truncate {activeBoard === board.name
-                  ? 'bg-surface-2 text-fg'
-                  : 'text-fg hover:bg-surface-2/60'}"
-                title={board.name}
-              >
-                {board.name}
-                <span class="text-xs text-fg-faint">({board.columns.length})</span>
-              </a>
+              {#if renamingBoard === board.name}
+                <RenameInput
+                  initialValue={board.name}
+                  placeholder="board name"
+                  onSubmit={(v) => handleRenameBoard(board.name, v)}
+                  onCancel={() => (renamingBoard = null)}
+                />
+              {:else}
+                <a
+                  href="/boards/{encodeURIComponent(board.name)}"
+                  use:withContextMenu={() => [
+                    {
+                      label: "Rename…",
+                      action: () => {
+                        renamingBoard = board.name;
+                      },
+                    },
+                    { label: "Delete board…", danger: true, action: () => deleteBoard(board.name) },
+                  ]}
+                  class="block px-2 py-1 rounded truncate {activeBoard === board.name
+                    ? 'bg-surface-2 text-fg'
+                    : 'text-fg hover:bg-surface-2/60'}"
+                  title={board.name}
+                >
+                  {board.name}
+                  <span class="text-xs text-fg-faint">({board.columns.length})</span>
+                </a>
+              {/if}
             {/each}
           {/if}
         </div>
@@ -438,6 +499,8 @@
 <CommandPalette />
 <SearchOverlay />
 <NewReminderDialog />
+<ContextMenu />
+<ConfirmDialog />
 
 {#if ui.openTaskPath}
   <div

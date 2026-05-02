@@ -1,6 +1,9 @@
 <script lang="ts">
   import type { VaultEntry } from "$lib/api/vault";
   import { ui } from "$lib/stores/ui.svelte";
+  import { vaultApi } from "$lib/api/vault";
+  import { confirm } from "$lib/stores/confirm.svelte";
+  import { withContextMenu } from "$lib/utils/contextMenu";
 
   let { entry }: { entry: VaultEntry } = $props();
 
@@ -22,6 +25,22 @@
       open();
     }
   }
+
+  function deleteCard() {
+    const fileName = entry.path.split("/").pop()?.replace(/\.md$/, "") ?? "";
+    const fm = (entry.frontmatter ?? {}) as Record<string, unknown>;
+    const t = (fm.title as string) ?? fileName;
+    confirm.ask({
+      title: `Delete card "${t}"?`,
+      message: "The file will be moved to the Trash.",
+      confirmLabel: "Move to Trash",
+      danger: true,
+      onConfirm: async () => {
+        if (ui.openTaskPath === entry.path) ui.openTaskPath = null;
+        await vaultApi.deletePath(entry.path);
+      },
+    });
+  }
 </script>
 
 <div
@@ -30,6 +49,9 @@
   data-card
   onclick={open}
   onkeydown={onKey}
+  use:withContextMenu={() => [
+    { label: "Delete card…", danger: true, action: deleteCard },
+  ]}
   class="rounded border border-border bg-surface-2 p-3 text-sm hover:border-border-strong cursor-grab active:cursor-grabbing select-none focus:outline-none focus:ring-1 focus:ring-fg-faint"
 >
   <div class="font-medium text-fg break-words">{title}</div>

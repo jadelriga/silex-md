@@ -2,11 +2,26 @@
   import { page } from "$app/state";
   import { reminders } from "$lib/stores/reminders.svelte";
   import { vault } from "$lib/stores/vault.svelte";
+  import { vaultApi } from "$lib/api/vault";
   import { noteHref, noteRelativePath, decodeNoteRouteParam } from "$lib/utils/notePath";
   import { formatReminder } from "$lib/utils/reminder";
+  import { withContextMenu } from "$lib/utils/contextMenu";
+  import { confirm } from "$lib/stores/confirm.svelte";
   import type { VaultEntry } from "$lib/api/vault";
 
   let pastExpanded = $state(false);
+
+  function deleteReminder(entry: VaultEntry) {
+    confirm.ask({
+      title: `Delete reminder "${reminderTitle(entry)}"?`,
+      message: "The reminder file will be moved to the Trash.",
+      confirmLabel: "Move to Trash",
+      danger: true,
+      onConfirm: async () => {
+        await vaultApi.deletePath(entry.path);
+      },
+    });
+  }
 
   function reminderTime(e: VaultEntry): string {
     const fm = (e.frontmatter ?? {}) as Record<string, unknown>;
@@ -53,6 +68,9 @@
   {@const rp = relPath(r)}
   <a
     href={noteHref(rp)}
+    use:withContextMenu={() => [
+      { label: "Delete reminder…", danger: true, action: () => deleteReminder(r) },
+    ]}
     class="flex items-center justify-between gap-2 px-2 py-0.5 rounded truncate {activeRelativePath ===
     rp
       ? 'bg-surface-2 text-fg'
@@ -90,6 +108,9 @@
       {@const rp = relPath(r)}
       <a
         href={noteHref(rp)}
+        use:withContextMenu={() => [
+          { label: "Delete reminder…", danger: true, action: () => deleteReminder(r) },
+        ]}
         class="flex items-center justify-between gap-2 px-2 py-0.5 pl-7 rounded truncate text-fg-muted opacity-70 hover:bg-surface-2/60"
         title={rp}
       >

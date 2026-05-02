@@ -31,4 +31,5 @@ tempfile = "3"
 notify = "6"
 tauri-plugin-notification = "2"
 portable-pty = "0.8"
+trash = "5"
 

@@ -2,7 +2,9 @@
   import { tick } from "svelte";
   import { dndzone } from "svelte-dnd-action";
   import type { VaultEntry } from "$lib/api/vault";
+  import { withContextMenu } from "$lib/utils/contextMenu";
   import Card from "./Card.svelte";
+  import RenameInput from "./RenameInput.svelte";
 
   type CardItem = VaultEntry & { id: string };
 
@@ -19,6 +21,8 @@
     onHeaderDragLeave,
     onHeaderDrop,
     onAddTask,
+    onDeleteColumn,
+    onRenameColumn,
   }: {
     name: string;
     items: CardItem[];
@@ -32,8 +36,11 @@
     onHeaderDragLeave?: (e: DragEvent) => void;
     onHeaderDrop?: (e: DragEvent) => void;
     onAddTask?: (title: string) => Promise<void> | void;
+    onDeleteColumn?: () => void;
+    onRenameColumn?: (newName: string) => Promise<void> | void;
   } = $props();
 
+  let renaming = $state(false);
   let adding = $state(false);
   let taskTitle = $state("");
   let inputEl = $state<HTMLInputElement | undefined>();
@@ -84,21 +91,48 @@
     ? 'opacity-50'
     : ''} {isDragTarget ? 'border-fg-faint' : 'border-border'}"
 >
-  <!-- svelte-ignore a11y_no_static_element_interactions -->
-  <div
-    draggable={onHeaderDragStart ? "true" : "false"}
-    ondragstart={onHeaderDragStart}
-    ondragend={onHeaderDragEnd}
-    ondragover={onHeaderDragOver}
-    ondragleave={onHeaderDragLeave}
-    ondrop={onHeaderDrop}
-    class="px-3 py-2 border-b border-border text-sm font-medium text-fg flex items-center justify-between {onHeaderDragStart
-      ? 'cursor-grab active:cursor-grabbing'
-      : ''} select-none"
-  >
-    <span>{name}</span>
-    <span class="text-xs text-fg-subtle">{items.length}</span>
-  </div>
+  {#if renaming && onRenameColumn}
+    <div class="border-b border-border">
+      <RenameInput
+        initialValue={name}
+        placeholder="column name"
+        onSubmit={async (v) => {
+          await onRenameColumn(v);
+          renaming = false;
+        }}
+        onCancel={() => (renaming = false)}
+      />
+    </div>
+  {:else}
+    <!-- svelte-ignore a11y_no_static_element_interactions -->
+    <div
+      draggable={onHeaderDragStart ? "true" : "false"}
+      ondragstart={onHeaderDragStart}
+      ondragend={onHeaderDragEnd}
+      ondragover={onHeaderDragOver}
+      ondragleave={onHeaderDragLeave}
+      ondrop={onHeaderDrop}
+      use:withContextMenu={() => {
+        const items: { label: string; action: () => void; danger?: boolean }[] = [];
+        if (onRenameColumn)
+          items.push({
+            label: "Rename…",
+            action: () => {
+              renaming = true;
+            },
+          });
+        if (onDeleteColumn)
+          items.push({ label: "Delete column…", danger: true, action: onDeleteColumn });
+        return items;
+      }}
+      class="px-3 py-2 border-b border-border text-sm font-medium text-fg flex items-center justify-between {onHeaderDragStart
+        ? 'cursor-grab active:cursor-grabbing'
+        : ''} select-none"
+    >
+      <span>{name}</span>
+      <span class="text-xs text-fg-subtle">{items.length}</span>
+    </div>
+  {/if}
   <div
     class="flex-1 p-2 space-y-2 overflow-y-auto min-h-[100px]"
     use:dndzone={{ items, type: "card", flipDurationMs: 150, dropTargetStyle: {} }}

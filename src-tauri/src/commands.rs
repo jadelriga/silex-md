@@ -478,6 +478,101 @@ pub async fn delete_task(path: String) -> Result<(), String> {
 }
 
 #[tauri::command]
+pub async fn delete_path(path: String) -> Result<(), String> {
+    let p = PathBuf::from(&path);
+    if !p.exists() {
+        return Err(format!("Path does not exist: {}", path));
+    }
+    trash::delete(&p).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn delete_column(
+    vault_path: String,
+    board_name: String,
+    column_name: String,
+) -> Result<(), String> {
+    if board_name.contains('/') || board_name.contains("..") || board_name.is_empty() {
+        return Err("Invalid board name".to_string());
+    }
+    if column_name.contains('/') || column_name.contains("..") || column_name.is_empty() {
+        return Err("Invalid column name".to_string());
+    }
+    let board_dir = PathBuf::from(&vault_path).join("boards").join(&board_name);
+    if !board_dir.is_dir() {
+        return Err(format!("Board not found: {}", board_name));
+    }
+    let column_dir = board_dir.join(&column_name);
+    if !column_dir.is_dir() {
+        return Err(format!("Column not found: {}/{}", board_name, column_name));
+    }
+
+    trash::delete(&column_dir).map_err(|e| e.to_string())?;
+
+    let mut meta = read_board_meta(&board_dir);
+    meta.columns.retain(|c| c != &column_name);
+    write_board_meta(&board_dir, &meta)?;
+    Ok(())
+}
+
+#[tauri::command]
+pub async fn rename_column(
+    vault_path: String,
+    board_name: String,
+    column_name: String,
+    new_name: String,
+) -> Result<(), String> {
+    if board_name.contains('/') || board_name.contains("..") || board_name.is_empty() {
+        return Err("Invalid board name".to_string());
+    }
+    if column_name.contains('/') || column_name.contains("..") || column_name.is_empty() {
+        return Err("Invalid column name".to_string());
+    }
+    let trimmed = new_name.trim();
+    if trimmed.is_empty() {
+        return Err("Column name cannot be empty".to_string());
+    }
+    if trimmed.contains('/') || trimmed.contains("..") {
+        return Err("Column name cannot contain '/' or '..'".to_string());
+    }
+    if trimmed == column_name {
+        return Ok(());
+    }
+
+    let board_dir = PathBuf::from(&vault_path).join("boards").join(&board_name);
+    if !board_dir.is_dir() {
+        return Err(format!("Board not found: {}", board_name));
+    }
+    let from = board_dir.join(&column_name);
+    if !from.is_dir() {
+        return Err(format!("Column not found: {}/{}", board_name, column_name));
+    }
+    let to = board_dir.join(trimmed);
+    if to.exists() {
+        return Err(format!(
+            "Column '{}' already exists in board '{}'",
+            trimmed, board_name
+        ));
+    }
+
+    fs::rename(&from, &to).map_err(|e| e.to_string())?;
+
+    let mut meta = read_board_meta(&board_dir);
+    let mut found = false;
+    for c in meta.columns.iter_mut() {
+        if c == &column_name {
+            *c = trimmed.to_string();
+            found = true;
+        }
+    }
+    if !found {
+        meta.columns.push(trimmed.to_string());
+    }
+    write_board_meta(&board_dir, &meta)?;
+    Ok(())
+}
+
+#[tauri::command]
 pub async fn create_board(vault_path: String, name: String) -> Result<String, String> {
     do_create_board(Path::new(&vault_path), &name)
         .map(|p| p.to_string_lossy().into_owned())

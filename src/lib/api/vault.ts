@@ -39,6 +39,20 @@ export const vaultApi = {
   deleteTask(path: string): Promise<void> {
     return invoke("delete_task", { path });
   },
+  deletePath(path: string): Promise<void> {
+    return invoke("delete_path", { path });
+  },
+  deleteColumn(vaultPath: string, boardName: string, columnName: string): Promise<void> {
+    return invoke("delete_column", { vaultPath, boardName, columnName });
+  },
+  renameColumn(
+    vaultPath: string,
+    boardName: string,
+    columnName: string,
+    newName: string,
+  ): Promise<void> {
+    return invoke("rename_column", { vaultPath, boardName, columnName, newName });
+  },
   watchVault(path: string): Promise<void> {
     return invoke("watch_vault", { path });
   },
