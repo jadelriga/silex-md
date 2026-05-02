@@ -2,9 +2,9 @@ mod commands;
 mod pty;
 
 use commands::{
-    create_board, create_column, create_note, create_note_folder, create_reminder, delete_task,
-    list_boards, list_note_folders, move_task, read_bodies, read_entry, read_task_body, read_vault,
-    set_board_column_order, watch_vault, write_task, WatcherState,
+    create_board, create_column, create_note, create_note_folder, create_reminder, create_task,
+    delete_task, list_boards, list_note_folders, move_task, read_bodies, read_entry,
+    read_task_body, read_vault, set_board_column_order, watch_vault, write_task, WatcherState,
 };
 use pty::{shell_input, shell_kill, shell_resize, spawn_shell, PtyState};
 
@@ -33,6 +33,7 @@ pub fn run() {
             create_note_folder,
             create_note,
             create_reminder,
+            create_task,
             set_board_column_order,
             spawn_shell,
             shell_input,

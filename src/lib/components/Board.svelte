@@ -169,6 +169,14 @@
     addingColumn = false;
     await boards.load(vault.path);
   }
+
+  async function handleAddTask(columnName: string, title: string) {
+    if (!vault.path) return;
+    const items = columnsState[columnName] ?? [];
+    const lastOrder = items.length > 0 ? getOrder(items[items.length - 1]) : null;
+    const newOrder = generateKeyBetween(lastOrder, null);
+    await vaultApi.createTask(vault.path, name, columnName, title, newOrder);
+  }
 </script>
 
 <div class="flex h-full overflow-x-auto overflow-y-hidden gap-3 p-3">
@@ -185,6 +193,7 @@
       onHeaderDragOver={(e) => onColumnDragOver(e, colName)}
       onHeaderDragLeave={() => onColumnDragLeave(colName)}
       onHeaderDrop={(e) => onColumnDrop(e, colName)}
+      onAddTask={(title) => handleAddTask(colName, title)}
     />
   {/each}
 

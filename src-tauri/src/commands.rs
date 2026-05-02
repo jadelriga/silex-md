@@ -220,6 +220,80 @@ pub async fn create_reminder(
         .map(|p| p.to_string_lossy().into_owned())
 }
 
+#[tauri::command]
+pub async fn create_task(
+    vault_path: String,
+    board_name: String,
+    column_name: String,
+    title: String,
+    order: Option<String>,
+) -> Result<String, String> {
+    do_create_task(
+        Path::new(&vault_path),
+        &board_name,
+        &column_name,
+        &title,
+        order.as_deref(),
+    )
+    .map(|p| p.to_string_lossy().into_owned())
+}
+
+fn do_create_task(
+    vault: &Path,
+    board: &str,
+    column: &str,
+    title: &str,
+    order: Option<&str>,
+) -> Result<PathBuf, String> {
+    let trimmed_title = title.trim();
+    if trimmed_title.is_empty() {
+        return Err("Title cannot be empty".to_string());
+    }
+    let trimmed_board = board.trim();
+    let trimmed_column = column.trim();
+    if trimmed_board.is_empty() || trimmed_board.contains('/') || trimmed_board.contains("..") {
+        return Err("Invalid board name".to_string());
+    }
+    if trimmed_column.is_empty() || trimmed_column.contains('/') || trimmed_column.contains("..") {
+        return Err("Invalid column name".to_string());
+    }
+
+    let column_dir = vault
+        .join("boards")
+        .join(trimmed_board)
+        .join(trimmed_column);
+    if !column_dir.is_dir() {
+        return Err(format!(
+            "Column not found: {}/{}",
+            trimmed_board, trimmed_column
+        ));
+    }
+
+    let base_slug = slugify(trimmed_title);
+    if base_slug.is_empty() {
+        return Err("Title produces an empty slug".to_string());
+    }
+
+    let mut counter = 0;
+    let mut slug = base_slug.clone();
+    let mut path = column_dir.join(format!("{}.md", slug));
+    while path.exists() {
+        counter += 1;
+        slug = format!("{}-{}", base_slug, counter);
+        path = column_dir.join(format!("{}.md", slug));
+    }
+
+    let mut content = String::from("---\n");
+    content.push_str(&format!("title: {}\n", yaml_dq(trimmed_title)));
+    if let Some(o) = order {
+        content.push_str(&format!("order: {}\n", yaml_dq(o)));
+    }
+    content.push_str("---\n");
+
+    fs::write(&path, content).map_err(|e| e.to_string())?;
+    Ok(path)
+}
+
 fn do_create_reminder(vault: &Path, title: &str, reminder: &str) -> Result<PathBuf, String> {
     let trimmed_title = title.trim();
     if trimmed_title.is_empty() {
@@ -880,5 +954,62 @@ mod tests {
         assert_eq!(entry.kind, "reminder");
         assert!(entry.board.is_none());
         assert!(entry.column.is_none());
+    }
+
+    #[test]
+    fn create_task_creates_file_under_correct_column() {
+        let dir = tempfile::tempdir().unwrap();
+        let column_dir = dir.path().join("boards").join("my-board").join("backlog");
+        fs::create_dir_all(&column_dir).unwrap();
+        let path = do_create_task(dir.path(), "my-board", "backlog", "Fix bug", None).unwrap();
+        assert_eq!(path, column_dir.join("fix-bug.md"));
+        let content = fs::read_to_string(&path).unwrap();
+        assert!(content.contains("title: \"Fix bug\""));
+        assert!(!content.contains("order:"));
+    }
+
+    #[test]
+    fn create_task_includes_order_when_provided() {
+        let dir = tempfile::tempdir().unwrap();
+        let column_dir = dir.path().join("boards").join("b").join("c");
+        fs::create_dir_all(&column_dir).unwrap();
+        let path = do_create_task(dir.path(), "b", "c", "T", Some("a3")).unwrap();
+        let content = fs::read_to_string(&path).unwrap();
+        assert!(content.contains("order: \"a3\""));
+    }
+
+    #[test]
+    fn create_task_appends_counter_on_collision() {
+        let dir = tempfile::tempdir().unwrap();
+        let column_dir = dir.path().join("boards").join("b").join("c");
+        fs::create_dir_all(&column_dir).unwrap();
+        let p1 = do_create_task(dir.path(), "b", "c", "Fix bug", None).unwrap();
+        let p2 = do_create_task(dir.path(), "b", "c", "Fix bug", None).unwrap();
+        assert_eq!(p1, column_dir.join("fix-bug.md"));
+        assert_eq!(p2, column_dir.join("fix-bug-1.md"));
+    }
+
+    #[test]
+    fn create_task_rejects_empty_title() {
+        let dir = tempfile::tempdir().unwrap();
+        fs::create_dir_all(dir.path().join("boards").join("b").join("c")).unwrap();
+        assert!(do_create_task(dir.path(), "b", "c", "  ", None).is_err());
+        assert!(do_create_task(dir.path(), "b", "c", "!!!", None).is_err());
+    }
+
+    #[test]
+    fn create_task_rejects_invalid_board_or_column() {
+        let dir = tempfile::tempdir().unwrap();
+        assert!(do_create_task(dir.path(), "", "c", "T", None).is_err());
+        assert!(do_create_task(dir.path(), "b/x", "c", "T", None).is_err());
+        assert!(do_create_task(dir.path(), "..", "c", "T", None).is_err());
+        assert!(do_create_task(dir.path(), "b", "", "T", None).is_err());
+        assert!(do_create_task(dir.path(), "b", "..", "T", None).is_err());
+    }
+
+    #[test]
+    fn create_task_rejects_when_column_does_not_exist() {
+        let dir = tempfile::tempdir().unwrap();
+        assert!(do_create_task(dir.path(), "b", "c", "T", None).is_err());
     }
 }

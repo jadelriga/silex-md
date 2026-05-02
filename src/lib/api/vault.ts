@@ -73,4 +73,19 @@ export const vaultApi = {
   createReminder(vaultPath: string, title: string, reminder: string): Promise<string> {
     return invoke("create_reminder", { vaultPath, title, reminder });
   },
+  createTask(
+    vaultPath: string,
+    boardName: string,
+    columnName: string,
+    title: string,
+    order?: string,
+  ): Promise<string> {
+    return invoke("create_task", {
+      vaultPath,
+      boardName,
+      columnName,
+      title,
+      order: order ?? null,
+    });
+  },
 };
