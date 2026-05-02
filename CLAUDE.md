@@ -116,7 +116,7 @@ Forward-looking grouping of remaining post-v1 polish work. Each phase is roughly
 
 ### Phase 2 — Foundation polish
 - [ ] **Persist terminal panel height** across restarts (extend `settings.svelte.ts` — already does this; check it actually works after light-theme iter 2 landed).
-- [ ] **Scaffold cleanup.** Remove `static/vite.svg`, `tauri.svg`, `svelte.svg`, the `tauri-plugin-opener` plugin (Cargo.toml + lib.rs + capabilities) since it's unused.
+- [x] **Scaffold cleanup.** Removed `static/vite.svg`, `tauri.svg`, `svelte.svg` (unreferenced demo assets) and `tauri-plugin-opener` (Cargo.toml, lib.rs, `default.json` capability, `@tauri-apps/plugin-opener` npm dep).
 - [ ] **SILEX home banner.** Replace the Unicode box-drawing ASCII with an SVG (or a sized custom font) that aligns reliably across platforms.
 
 ### Phase 3 — Settings + terminal quality of life
@@ -293,7 +293,7 @@ Forward-looking grouping of remaining post-v1 polish work. Each phase is roughly
 - App shell: sidebar (`w-60`, dark) with "Silex" header (shows vault basename when loaded), main content area, bottom terminal panel
 - Terminal panel hidden by default, `⌘ J` toggles it (Ctrl on non-Mac), close button in panel header. (Originally specced as `Cmd+\``, swapped to `Cmd+J` because backtick is awkward on non-US keyboards.)
 - Full `uiStore` at `src/lib/stores/ui.svelte.ts` with `terminalOpen`, `activeBoard`, `openTaskPath`, `paletteOpen`, `searchOpen`
-- Tauri plugins: `tauri-plugin-dialog`, `tauri-plugin-store`, `tauri-plugin-opener` (unused, scaffold default)
+- Tauri plugins: `tauri-plugin-dialog`, `tauri-plugin-store`, `tauri-plugin-notification`
 - `vaultStore` at `src/lib/stores/vault.svelte.ts` with `path`, `isLoaded`, `load()`, `set()`, `clear()`
 - First-launch modal `src/lib/components/VaultSetup.svelte` shown when `isLoaded && !path`
 - Rust commands in `src-tauri/src/commands.rs`:
@@ -355,8 +355,6 @@ Forward-looking grouping of remaining post-v1 polish work. Each phase is roughly
 ```
 
 **Known leftover scaffolding to clean up later:**
-- `static/vite.svg`, `static/tauri.svg`, `static/svelte.svg` — demo assets, unreferenced
-- `tauri-plugin-opener` — scaffold default, currently unused; can be removed (Cargo.toml + lib.rs + capabilities)
 - macOS title bar still shows light system bar over dark UI. Tried during step 8 polish, reverted because nothing landed cleanly:
   - `"theme": "Dark"` on the window — no visible effect on macOS title bar (theme appears to be a Windows-mostly knob).
   - `"titleBarStyle": "Overlay"` (+ `hiddenTitle: true`) — does remove the white bar, but the window becomes undraggable: neither `data-tauri-drag-region` nor an explicit `getCurrentWindow().startDragging()` mousedown handler made the sidebar header into a drag handle.
