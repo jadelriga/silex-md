@@ -2,10 +2,12 @@ import type { VaultEntry, BoardLayout } from "$lib/api/vault";
 import { noteRelativePath, noteHref } from "$lib/utils/notePath";
 
 export type PaletteItemKind = "board" | "note" | "task" | "action";
+export type PaletteCategory = "navigation" | "command";
 
 export interface PaletteItem {
   id: string;
   kind: PaletteItemKind;
+  category: PaletteCategory;
   label: string;
   hint?: string;
   search: string;
@@ -22,82 +24,18 @@ export interface PaletteSources {
   toggleTerminal: () => void;
   setThemePref?: (pref: "system" | "light" | "dark") => void;
   startCreating?: (kind: "board" | "note" | "folder") => void;
+  openNewReminder?: () => void;
 }
 
 export function buildPaletteItems(s: PaletteSources): PaletteItem[] {
   const items: PaletteItem[] = [];
 
-  items.push({
-    id: "action:calendar",
-    kind: "action",
-    label: "Go to calendar",
-    search: "go to calendar action",
-    run: () => s.goto("/calendar"),
-  });
-
-  items.push({
-    id: "action:terminal",
-    kind: "action",
-    label: "Toggle terminal panel",
-    hint: "⌘J",
-    search: "toggle terminal panel action",
-    run: () => s.toggleTerminal(),
-  });
-
-  if (s.setThemePref) {
-    const setThemePref = s.setThemePref;
-    items.push({
-      id: "action:theme-system",
-      kind: "action",
-      label: "Theme: Use system",
-      search: "theme system action",
-      run: () => setThemePref("system"),
-    });
-    items.push({
-      id: "action:theme-light",
-      kind: "action",
-      label: "Theme: Light",
-      search: "theme light action",
-      run: () => setThemePref("light"),
-    });
-    items.push({
-      id: "action:theme-dark",
-      kind: "action",
-      label: "Theme: Dark",
-      search: "theme dark action",
-      run: () => setThemePref("dark"),
-    });
-  }
-
-  if (s.startCreating) {
-    const startCreating = s.startCreating;
-    items.push({
-      id: "action:new-board",
-      kind: "action",
-      label: "New board…",
-      search: "new board create action",
-      run: () => startCreating("board"),
-    });
-    items.push({
-      id: "action:new-note",
-      kind: "action",
-      label: "New note…",
-      search: "new note create action",
-      run: () => startCreating("note"),
-    });
-    items.push({
-      id: "action:new-folder",
-      kind: "action",
-      label: "New notes folder…",
-      search: "new folder notes create action",
-      run: () => startCreating("folder"),
-    });
-  }
-
+  // Navigation: boards
   for (const board of s.boards) {
     items.push({
       id: `board:${board.name}`,
       kind: "board",
+      category: "navigation",
       label: board.name,
       hint: `${board.columns.length} column${board.columns.length === 1 ? "" : "s"}`,
       search: `board ${board.name}`,
@@ -105,6 +43,7 @@ export function buildPaletteItems(s: PaletteSources): PaletteItem[] {
     });
   }
 
+  // Navigation: tasks
   for (const task of s.tasks) {
     const fm = (task.frontmatter ?? {}) as Record<string, unknown>;
     const fileName = task.path.split("/").pop()?.replace(/\.md$/, "") ?? "";
@@ -113,6 +52,7 @@ export function buildPaletteItems(s: PaletteSources): PaletteItem[] {
     items.push({
       id: `task:${task.path}`,
       kind: "task",
+      category: "navigation",
       label: title,
       hint: `${task.board ?? ""}${task.column ? ` / ${task.column}` : ""}`,
       search: `task ${title} ${task.board ?? ""} ${task.column ?? ""} ${tags}`,
@@ -120,6 +60,7 @@ export function buildPaletteItems(s: PaletteSources): PaletteItem[] {
     });
   }
 
+  // Navigation: notes
   if (s.vaultPath) {
     for (const note of s.notes) {
       const rel = noteRelativePath(note.path, s.vaultPath);
@@ -128,12 +69,105 @@ export function buildPaletteItems(s: PaletteSources): PaletteItem[] {
       items.push({
         id: `note:${note.path}`,
         kind: "note",
+        category: "navigation",
         label: title,
         hint: rel,
         search: `note ${title} ${rel}`,
         run: () => s.goto(noteHref(rel)),
       });
     }
+  }
+
+  // Command: go to calendar
+  items.push({
+    id: "action:calendar",
+    kind: "action",
+    category: "command",
+    label: "Go to calendar",
+    search: "go to calendar action",
+    run: () => s.goto("/calendar"),
+  });
+
+  // Command: terminal toggle
+  items.push({
+    id: "action:terminal",
+    kind: "action",
+    category: "command",
+    label: "Toggle terminal panel",
+    hint: "⌘J",
+    search: "toggle terminal panel action",
+    run: () => s.toggleTerminal(),
+  });
+
+  // Command: create flows
+  if (s.startCreating) {
+    const startCreating = s.startCreating;
+    items.push({
+      id: "action:new-board",
+      kind: "action",
+      category: "command",
+      label: "New board…",
+      search: "new board create action",
+      run: () => startCreating("board"),
+    });
+    items.push({
+      id: "action:new-note",
+      kind: "action",
+      category: "command",
+      label: "New note…",
+      search: "new note create action",
+      run: () => startCreating("note"),
+    });
+    items.push({
+      id: "action:new-folder",
+      kind: "action",
+      category: "command",
+      label: "New notes folder…",
+      search: "new folder notes create action",
+      run: () => startCreating("folder"),
+    });
+  }
+
+  // Command: new reminder
+  if (s.openNewReminder) {
+    const openNewReminder = s.openNewReminder;
+    items.push({
+      id: "action:new-reminder",
+      kind: "action",
+      category: "command",
+      label: "New reminder…",
+      search: "new reminder create action",
+      run: () => openNewReminder(),
+    });
+  }
+
+  // Command: theme switching
+  if (s.setThemePref) {
+    const setThemePref = s.setThemePref;
+    items.push({
+      id: "action:theme-system",
+      kind: "action",
+      category: "command",
+      label: "Theme: Use system",
+      search: "theme system action",
+      run: () => setThemePref("system"),
+    });
+    items.push({
+      id: "action:theme-light",
+      kind: "action",
+      category: "command",
+      label: "Theme: Light",
+      search: "theme light action",
+      run: () => setThemePref("light"),
+    });
+    items.push({
+      id: "action:theme-dark",
+      kind: "action",
+      category: "command",
+      label: "Theme: Dark",
+      search: "theme dark action",
+      run: () => setThemePref("dark"),
+    });
   }
 
   return items;

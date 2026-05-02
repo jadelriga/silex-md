@@ -10,11 +10,13 @@ export interface NewReminderState {
   time?: string;
 }
 
+export type PaletteMode = "navigation" | "command" | null;
+
 class UiStore {
   terminalOpen = $state(false);
   activeBoard = $state<string | null>(null);
   openTaskPath = $state<string | null>(null);
-  paletteOpen = $state(false);
+  paletteMode = $state<PaletteMode>(null);
   searchOpen = $state(false);
   creating = $state<CreatingKind>(null);
   notesDrag = $state<NotesDrag | null>(null);

@@ -106,11 +106,21 @@
       }
       if ((e.metaKey || e.ctrlKey) && !e.shiftKey && e.key.toLowerCase() === "p") {
         e.preventDefault();
-        if (ui.paletteOpen) {
-          ui.paletteOpen = false;
+        if (ui.paletteMode === "navigation") {
+          ui.paletteMode = null;
         } else {
           ui.searchOpen = false;
-          ui.paletteOpen = true;
+          ui.paletteMode = "navigation";
+        }
+        return;
+      }
+      if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key.toLowerCase() === "p") {
+        e.preventDefault();
+        if (ui.paletteMode === "command") {
+          ui.paletteMode = null;
+        } else {
+          ui.searchOpen = false;
+          ui.paletteMode = "command";
         }
         return;
       }
@@ -119,12 +129,17 @@
         if (ui.searchOpen) {
           ui.searchOpen = false;
         } else {
-          ui.paletteOpen = false;
+          ui.paletteMode = null;
           ui.searchOpen = true;
         }
         return;
       }
-      if (e.key === "Escape" && ui.openTaskPath && !ui.paletteOpen && !ui.searchOpen) {
+      if (
+        e.key === "Escape" &&
+        ui.openTaskPath &&
+        ui.paletteMode === null &&
+        !ui.searchOpen
+      ) {
         ui.openTaskPath = null;
       }
     };

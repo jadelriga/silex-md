@@ -13,7 +13,7 @@
   let selectedIndex = $state(0);
   let inputEl = $state<HTMLInputElement | undefined>();
 
-  const items = $derived(
+  const allItems = $derived(
     buildPaletteItems({
       boards: boards.list,
       notes: Array.from(notes.entries.values()),
@@ -24,7 +24,14 @@
       toggleTerminal: () => (ui.terminalOpen = !ui.terminalOpen),
       setThemePref: (pref) => void theme.setPref(pref),
       startCreating: (kind) => (ui.creating = kind),
+      openNewReminder: () => (ui.newReminder = {}),
     }),
+  );
+
+  const items = $derived(
+    ui.paletteMode === null
+      ? []
+      : allItems.filter((i) => i.category === ui.paletteMode),
   );
 
   const filtered = $derived(filterPaletteItems(items, query));
@@ -34,7 +41,7 @@
   });
 
   $effect(() => {
-    if (ui.paletteOpen) {
+    if (ui.paletteMode !== null) {
       query = "";
       selectedIndex = 0;
       tick().then(() => inputEl?.focus());
@@ -42,7 +49,7 @@
   });
 
   function close() {
-    ui.paletteOpen = false;
+    ui.paletteMode = null;
   }
 
   function execute(item: PaletteItem) {
@@ -82,9 +89,17 @@
     task: "text-amber-400",
     action: "text-fg-muted",
   };
+
+  const placeholder = $derived(
+    ui.paletteMode === "navigation"
+      ? "Type a board, note, or task…"
+      : "Type a command…",
+  );
+
+  const heading = $derived(ui.paletteMode === "navigation" ? "Open" : "Commands");
 </script>
 
-{#if ui.paletteOpen}
+{#if ui.paletteMode !== null}
   <!-- svelte-ignore a11y_click_events_have_key_events -->
   <!-- svelte-ignore a11y_no_static_element_interactions -->
   <div
@@ -96,11 +111,14 @@
     <div
       class="w-[32rem] max-w-[90vw] rounded-lg border border-border bg-surface-1 shadow-2xl overflow-hidden"
     >
+      <div class="px-4 pt-2 pb-1 text-xs uppercase tracking-wide text-fg-subtle border-b border-border">
+        {heading}
+      </div>
       <input
         bind:this={inputEl}
         bind:value={query}
         onkeydown={onKeydown}
-        placeholder="Type a command, board, note, or task…"
+        {placeholder}
         autocomplete="off"
         autocorrect="off"
         autocapitalize="off"

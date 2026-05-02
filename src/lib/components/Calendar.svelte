@@ -6,9 +6,11 @@
   let {
     events,
     onEventClick,
+    onDateClick,
   }: {
     events: CalendarEventInput[];
     onEventClick?: (id: string) => void;
+    onDateClick?: (date: string) => void;
   } = $props();
 
   let target: HTMLDivElement;
@@ -29,10 +31,19 @@
     view: "dayGridMonth",
     events: [] as ReturnType<typeof toEcEvents>,
     eventClick: (info: { event: { id: string } }) => onEventClick?.(info.event.id),
+    dateClick: (info: { date: Date; dateStr: string }) =>
+      onDateClick?.(info.dateStr || isoDate(info.date)),
     height: "100%",
     locale: "en-US",
     firstDay: 1,
   });
+
+  function isoDate(d: Date): string {
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, "0");
+    const day = String(d.getDate()).padStart(2, "0");
+    return `${y}-${m}-${day}`;
+  }
 
   $effect(() => {
     calOptions.events = toEcEvents(events);
@@ -44,7 +55,7 @@
       cal = mount(ec.Calendar as never, {
         target,
         props: {
-          plugins: [ec.DayGrid],
+          plugins: [ec.DayGrid, ec.Interaction],
           options: calOptions,
         },
       });

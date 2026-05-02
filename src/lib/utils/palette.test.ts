@@ -140,6 +140,54 @@ describe("buildPaletteItems", () => {
     const items = buildPaletteItems(makeSources({}));
     expect(items.find((i) => i.id === "action:new-board")).toBeUndefined();
   });
+
+  it("emits a new-reminder action when openNewReminder is provided", () => {
+    const openNewReminder = vi.fn();
+    const items = buildPaletteItems(makeSources({ openNewReminder }));
+    expect(items.find((i) => i.id === "action:new-reminder")).toBeDefined();
+    items.find((i) => i.id === "action:new-reminder")?.run();
+    expect(openNewReminder).toHaveBeenCalled();
+  });
+
+  it("categorizes navigation items: boards, tasks, notes", () => {
+    const items = buildPaletteItems(
+      makeSources({
+        boards: [{ name: "alpha", columns: [] }],
+        tasks: [task("/v/boards/b/c/t.md", "T")],
+        notes: [note("/vault/n.md", "N")],
+      }),
+    );
+    const navIds = items.filter((i) => i.category === "navigation").map((i) => i.id);
+    expect(navIds).toEqual(
+      expect.arrayContaining(["board:alpha", "task:/v/boards/b/c/t.md", "note:/vault/n.md"]),
+    );
+    // Calendar action is a command, not navigation
+    expect(navIds).not.toContain("action:calendar");
+  });
+
+  it("categorizes command items: calendar, terminal, theme, create flows, new-reminder", () => {
+    const items = buildPaletteItems(
+      makeSources({
+        setThemePref: vi.fn(),
+        startCreating: vi.fn(),
+        openNewReminder: vi.fn(),
+      }),
+    );
+    const cmdIds = items.filter((i) => i.category === "command").map((i) => i.id);
+    expect(cmdIds).toEqual(
+      expect.arrayContaining([
+        "action:calendar",
+        "action:terminal",
+        "action:theme-system",
+        "action:theme-light",
+        "action:theme-dark",
+        "action:new-board",
+        "action:new-note",
+        "action:new-folder",
+        "action:new-reminder",
+      ]),
+    );
+  });
 });
 
 describe("filterPaletteItems", () => {
