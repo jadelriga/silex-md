@@ -115,6 +115,7 @@ pub async fn list_note_folders(vault_path: String) -> Result<Vec<String>, String
     }
     let boards_dir = vault.join("boards");
     let templates_dir = vault.join("templates");
+    let reminders_dir = vault.join("reminders");
     let mut out: Vec<String> = Vec::new();
 
     for entry in WalkDir::new(&vault)
@@ -123,7 +124,9 @@ pub async fn list_note_folders(vault_path: String) -> Result<Vec<String>, String
         .into_iter()
         .filter_entry(|e| {
             let p = e.path();
-            !p.starts_with(&boards_dir) && !p.starts_with(&templates_dir)
+            !p.starts_with(&boards_dir)
+                && !p.starts_with(&templates_dir)
+                && !p.starts_with(&reminders_dir)
         })
         .filter_map(|e| e.ok())
     {
@@ -205,6 +208,71 @@ pub async fn set_board_column_order(
         return Err(format!("Board not found: {}", board_name));
     }
     write_board_meta(&board_dir, &BoardMeta { columns })
+}
+
+#[tauri::command]
+pub async fn create_reminder(
+    vault_path: String,
+    title: String,
+    reminder: String,
+) -> Result<String, String> {
+    do_create_reminder(Path::new(&vault_path), &title, &reminder)
+        .map(|p| p.to_string_lossy().into_owned())
+}
+
+fn do_create_reminder(vault: &Path, title: &str, reminder: &str) -> Result<PathBuf, String> {
+    let trimmed_title = title.trim();
+    if trimmed_title.is_empty() {
+        return Err("Title cannot be empty".to_string());
+    }
+    let trimmed_reminder = reminder.trim();
+    if trimmed_reminder.is_empty() {
+        return Err("Reminder time cannot be empty".to_string());
+    }
+
+    let base_slug = slugify(trimmed_title);
+    if base_slug.is_empty() {
+        return Err("Title produces an empty slug".to_string());
+    }
+
+    let reminders_dir = vault.join("reminders");
+    fs::create_dir_all(&reminders_dir).map_err(|e| e.to_string())?;
+
+    let mut counter = 0;
+    let mut slug = base_slug.clone();
+    let mut path = reminders_dir.join(format!("{}.md", slug));
+    while path.exists() {
+        counter += 1;
+        slug = format!("{}-{}", base_slug, counter);
+        path = reminders_dir.join(format!("{}.md", slug));
+    }
+
+    let content = format!(
+        "---\ntitle: {}\nreminder: {}\n---\n",
+        yaml_dq(trimmed_title),
+        yaml_dq(trimmed_reminder)
+    );
+    fs::write(&path, content).map_err(|e| e.to_string())?;
+    Ok(path)
+}
+
+fn slugify(s: &str) -> String {
+    let lower = s.to_lowercase();
+    let parts: Vec<String> = lower
+        .split(|c: char| !c.is_ascii_alphanumeric())
+        .filter(|s| !s.is_empty())
+        .map(|s| s.to_string())
+        .collect();
+    parts.join("-")
+}
+
+fn yaml_dq(s: &str) -> String {
+    let escaped = s
+        .replace('\\', "\\\\")
+        .replace('"', "\\\"")
+        .replace('\n', " ")
+        .replace('\r', " ");
+    format!("\"{}\"", escaped)
 }
 
 #[tauri::command]
@@ -496,6 +564,9 @@ fn parse_entry(p: &Path, boards_dir: &Path) -> Option<VaultEntry> {
         return None;
     }
 
+    let vault = boards_dir.parent()?;
+    let reminders_dir = vault.join("reminders");
+
     let (kind, board, column) = if p.starts_with(boards_dir) {
         let rel = p.strip_prefix(boards_dir).ok()?;
         let parts: Vec<_> = rel.iter().collect();
@@ -506,6 +577,8 @@ fn parse_entry(p: &Path, boards_dir: &Path) -> Option<VaultEntry> {
         } else {
             return None;
         }
+    } else if p.starts_with(&reminders_dir) {
+        ("reminder".to_string(), None, None)
     } else {
         ("note".to_string(), None, None)
     };
@@ -735,5 +808,77 @@ mod tests {
         fs::write(dir.path().join("_silex.json"), "not json").unwrap();
         let meta = read_board_meta(dir.path());
         assert!(meta.columns.is_empty());
+    }
+
+    #[test]
+    fn slugify_handles_simple_titles() {
+        assert_eq!(slugify("Call dentist"), "call-dentist");
+        assert_eq!(slugify("Hello, World!"), "hello-world");
+        assert_eq!(slugify("foo  bar   baz"), "foo-bar-baz");
+    }
+
+    #[test]
+    fn slugify_handles_empty_or_only_special() {
+        assert_eq!(slugify(""), "");
+        assert_eq!(slugify("!!!"), "");
+        assert_eq!(slugify("   "), "");
+    }
+
+    #[test]
+    fn yaml_dq_escapes_backslashes_and_quotes() {
+        assert_eq!(yaml_dq("plain"), "\"plain\"");
+        assert_eq!(yaml_dq("with \"quotes\""), "\"with \\\"quotes\\\"\"");
+        assert_eq!(yaml_dq("a\\b"), "\"a\\\\b\"");
+        assert_eq!(yaml_dq("multi\nline"), "\"multi line\"");
+    }
+
+    #[test]
+    fn create_reminder_creates_file_under_reminders_with_frontmatter() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = do_create_reminder(dir.path(), "Call dentist", "2026-05-10T14:30").unwrap();
+        assert_eq!(path, dir.path().join("reminders").join("call-dentist.md"));
+        let content = fs::read_to_string(&path).unwrap();
+        assert!(content.contains("title: \"Call dentist\""));
+        assert!(content.contains("reminder: \"2026-05-10T14:30\""));
+    }
+
+    #[test]
+    fn create_reminder_appends_counter_on_collision() {
+        let dir = tempfile::tempdir().unwrap();
+        let p1 = do_create_reminder(dir.path(), "Same title", "2026-05-10T10:00").unwrap();
+        let p2 = do_create_reminder(dir.path(), "Same title", "2026-05-10T11:00").unwrap();
+        assert_eq!(p1, dir.path().join("reminders").join("same-title.md"));
+        assert_eq!(p2, dir.path().join("reminders").join("same-title-1.md"));
+    }
+
+    #[test]
+    fn create_reminder_rejects_empty_title() {
+        let dir = tempfile::tempdir().unwrap();
+        assert!(do_create_reminder(dir.path(), "  ", "2026-05-10T10:00").is_err());
+        assert!(do_create_reminder(dir.path(), "!!!", "2026-05-10T10:00").is_err());
+    }
+
+    #[test]
+    fn create_reminder_rejects_empty_reminder_time() {
+        let dir = tempfile::tempdir().unwrap();
+        assert!(do_create_reminder(dir.path(), "Title", "").is_err());
+    }
+
+    #[test]
+    fn parse_entry_classifies_reminder_under_reminders_dir() {
+        use std::io::Write as _;
+        let dir = tempfile::tempdir().unwrap();
+        let boards = dir.path().join("boards");
+        let reminders = dir.path().join("reminders");
+        fs::create_dir_all(&reminders).unwrap();
+        let r_file = reminders.join("call-dentist.md");
+        let mut f = fs::File::create(&r_file).unwrap();
+        f.write_all(b"---\ntitle: Call dentist\nreminder: 2026-05-10T14:30\n---\n")
+            .unwrap();
+
+        let entry = parse_entry(&r_file, &boards).unwrap();
+        assert_eq!(entry.kind, "reminder");
+        assert!(entry.board.is_none());
+        assert!(entry.column.is_none());
     }
 }

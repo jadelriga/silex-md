@@ -1,6 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
 
-export type EntryKind = "task" | "note";
+export type EntryKind = "task" | "note" | "reminder";
 
 export interface VaultEntry {
   path: string;
@@ -69,5 +69,8 @@ export const vaultApi = {
     columns: string[],
   ): Promise<void> {
     return invoke("set_board_column_order", { vaultPath, boardName, columns });
+  },
+  createReminder(vaultPath: string, title: string, reminder: string): Promise<string> {
+    return invoke("create_reminder", { vaultPath, title, reminder });
   },
 };

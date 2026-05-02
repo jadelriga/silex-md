@@ -1,6 +1,7 @@
 <script lang="ts">
   import { onMount } from "svelte";
   import { notes } from "$lib/stores/notes.svelte";
+  import { reminders } from "$lib/stores/reminders.svelte";
   import { vaultApi } from "$lib/api/vault";
   import { syncEvents } from "$lib/stores/syncEvents.svelte";
   import { buildTaskContent } from "$lib/utils/yaml";
@@ -10,7 +11,7 @@
 
   let { path }: { path: string } = $props();
 
-  const entry = $derived(notes.entries.get(path) ?? null);
+  const entry = $derived(notes.entries.get(path) ?? reminders.entries.get(path) ?? null);
 
   let titleDraft = $state("");
   let bodyDraft = $state("");

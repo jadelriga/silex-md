@@ -2,6 +2,7 @@ import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import { vaultApi } from "$lib/api/vault";
 import { tasks } from "$lib/stores/tasks.svelte";
 import { notes } from "$lib/stores/notes.svelte";
+import { reminders } from "$lib/stores/reminders.svelte";
 import { boards } from "$lib/stores/boards.svelte";
 import { bodies } from "$lib/stores/bodies.svelte";
 import { writeHashes } from "$lib/stores/writeHashes";
@@ -23,6 +24,7 @@ export async function handleVaultChange(change: VaultChangeEvent): Promise<void>
     writeHashes.delete(path);
     tasks.remove(path);
     notes.remove(path);
+    reminders.remove(path);
     bodies.invalidate(path);
     if (vault.path) boards.load(vault.path);
     return;
@@ -39,6 +41,7 @@ export async function handleVaultChange(change: VaultChangeEvent): Promise<void>
     if (entry) {
       if (entry.kind === "task") tasks.upsert(entry);
       else if (entry.kind === "note") notes.upsert(entry);
+      else if (entry.kind === "reminder") reminders.upsert(entry);
       if (bodies.isLoaded) void bodies.refresh(path);
     } else {
       // File no longer exists at this path (e.g. rename source on macOS reports
@@ -46,6 +49,7 @@ export async function handleVaultChange(change: VaultChangeEvent): Promise<void>
       // null). Treat as a removal.
       tasks.remove(path);
       notes.remove(path);
+      reminders.remove(path);
       bodies.invalidate(path);
     }
     boards.load(vault.path);

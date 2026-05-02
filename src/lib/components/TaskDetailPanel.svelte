@@ -7,8 +7,10 @@
   import { buildTaskContent } from "$lib/utils/yaml";
   import { clickOutside } from "$lib/utils/clickOutside";
   import { toggleCheckboxAtIndex } from "$lib/utils/checkbox";
+  import { formatReminder } from "$lib/utils/reminder";
   import CodeMirrorEditor from "./CodeMirrorEditor.svelte";
   import MarkdownPreview from "./MarkdownPreview.svelte";
+  import ReminderPopover from "./ReminderPopover.svelte";
 
   let { path }: { path: string } = $props();
 
@@ -17,10 +19,11 @@
   let titleDraft = $state("");
   let priorityDraft = $state("");
   let tagsDraft = $state("");
-  let dueDraft = $state("");
+  let reminderDraft = $state("");
   let estimateDraft = $state("");
   let bodyDraft = $state("");
   let bodyLoaded = $state(false);
+  let reminderPopoverOpen = $state(false);
 
   let baseFrontmatter = $state<Record<string, unknown>>({});
   let baseBody = $state("");
@@ -39,7 +42,7 @@
         titleDraft !== ((baseFrontmatter.title as string) ?? "") ||
         priorityDraft !== ((baseFrontmatter.priority as string) ?? "") ||
         tagsDraft !== ((baseFrontmatter.tags as string[] | undefined) ?? []).join(", ") ||
-        dueDraft !== ((baseFrontmatter.due as string) ?? "") ||
+        reminderDraft !== ((baseFrontmatter.reminder as string) ?? "") ||
         estimateDraft !== ((baseFrontmatter.estimate as string) ?? "")),
   );
 
@@ -49,7 +52,7 @@
     titleDraft = (fm.title as string) ?? "";
     priorityDraft = (fm.priority as string) ?? "";
     tagsDraft = ((fm.tags as string[] | undefined) ?? []).join(", ");
-    dueDraft = (fm.due as string) ?? "";
+    reminderDraft = (fm.reminder as string) ?? "";
     estimateDraft = (fm.estimate as string) ?? "";
     baseFrontmatter = { ...fm };
     try {
@@ -103,8 +106,8 @@
         .filter(Boolean);
       if (tags.length) fm.tags = tags;
       else delete fm.tags;
-      if (dueDraft) fm.due = dueDraft;
-      else delete fm.due;
+      if (reminderDraft) fm.reminder = reminderDraft;
+      else delete fm.reminder;
       if (estimateDraft) fm.estimate = estimateDraft;
       else delete fm.estimate;
       fm.updated = new Date().toISOString().slice(0, 10);
@@ -210,14 +213,65 @@
           <option value="high">high</option>
         </select>
 
-        <input
-          bind:value={dueDraft}
-          oninput={onFieldChange}
-          type="date"
-          autocomplete="off"
-          spellcheck="false"
-          class="bg-surface-2 border border-border-strong rounded px-2 py-1 text-fg"
-        />
+        <div class="relative">
+          <button
+            type="button"
+            onclick={(e) => {
+              e.stopPropagation();
+              reminderPopoverOpen = !reminderPopoverOpen;
+            }}
+            title={reminderDraft ? `Reminder: ${formatReminder(reminderDraft)}` : "Set reminder"}
+            class="bg-surface-2 border border-border-strong rounded px-2 py-1 text-fg flex items-center gap-1.5 {reminderDraft
+              ? 'text-amber-400'
+              : ''}"
+          >
+            {#if reminderDraft}
+              <svg
+                viewBox="0 0 24 24"
+                fill="currentColor"
+                stroke="none"
+                class="w-4 h-4 shrink-0"
+                aria-hidden="true"
+              >
+                <path
+                  d="M12 2a1 1 0 0 1 1 1v.59a7.001 7.001 0 0 1 6 6.91V14l1.7 2.55A1 1 0 0 1 19.86 18H4.14a1 1 0 0 1-.84-1.45L5 14V10.5a7.001 7.001 0 0 1 6-6.91V3a1 1 0 0 1 1-1zm-2.5 18a2.5 2.5 0 0 0 5 0h-5z"
+                />
+              </svg>
+              <span class="text-xs">{formatReminder(reminderDraft)}</span>
+            {:else}
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                class="w-4 h-4 shrink-0"
+                aria-hidden="true"
+              >
+                <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" />
+                <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" />
+              </svg>
+              <span class="text-xs text-fg-subtle">Reminder</span>
+            {/if}
+          </button>
+          {#if reminderPopoverOpen}
+            <ReminderPopover
+              value={reminderDraft || null}
+              onSave={(iso) => {
+                reminderDraft = iso;
+                reminderPopoverOpen = false;
+                onFieldChange();
+              }}
+              onClear={() => {
+                reminderDraft = "";
+                reminderPopoverOpen = false;
+                onFieldChange();
+              }}
+              onClose={() => (reminderPopoverOpen = false)}
+            />
+          {/if}
+        </div>
 
         <input
           bind:value={estimateDraft}

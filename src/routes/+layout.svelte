@@ -7,6 +7,7 @@
   import { tasks } from "$lib/stores/tasks.svelte";
   import { boards } from "$lib/stores/boards.svelte";
   import { notes } from "$lib/stores/notes.svelte";
+  import { reminders } from "$lib/stores/reminders.svelte";
   import { theme } from "$lib/stores/theme.svelte";
   import { settings } from "$lib/stores/settings.svelte";
   import { vaultApi } from "$lib/api/vault";
@@ -15,6 +16,8 @@
   import VaultSetup from "$lib/components/VaultSetup.svelte";
   import TaskDetailPanel from "$lib/components/TaskDetailPanel.svelte";
   import NotesTree from "$lib/components/NotesTree.svelte";
+  import RemindersTree from "$lib/components/RemindersTree.svelte";
+  import NewReminderDialog from "$lib/components/NewReminderDialog.svelte";
   import Terminal from "$lib/components/Terminal.svelte";
   import CommandPalette from "$lib/components/CommandPalette.svelte";
   import SearchOverlay from "$lib/components/SearchOverlay.svelte";
@@ -81,6 +84,7 @@
     if (vault.path) {
       tasks.loadFromVault(vault.path);
       notes.loadFromVault(vault.path);
+      reminders.loadFromVault(vault.path);
       boards.load(vault.path);
       vaultApi.watchVault(vault.path).catch((e) => console.error("watch_vault failed", e));
       untrack(() => startScheduler());
@@ -279,6 +283,35 @@
           {/if}
         </div>
 
+        <div>
+          <div class="group px-2 py-1 flex items-center justify-between">
+            <span class="text-xs uppercase tracking-wide text-fg-subtle">Reminders</span>
+            {#if vault.path}
+              <button
+                onclick={() => (ui.newReminder = {})}
+                title="New reminder"
+                aria-label="New reminder"
+                class="opacity-0 group-hover:opacity-100 transition-opacity text-fg-subtle hover:text-fg"
+              >
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4">
+                  <path d="M12 5v14M5 12h14" stroke-linecap="round" />
+                </svg>
+              </button>
+            {/if}
+          </div>
+          {#if !vault.path}
+            <div class="px-2 py-1 text-fg-faint italic">No vault loaded</div>
+          {:else if !reminders.isLoaded}
+            <div class="px-2 py-1 text-fg-faint italic">Loading…</div>
+          {:else if reminders.error}
+            <div class="px-2 py-1 text-red-400 text-xs">{reminders.error}</div>
+          {:else if reminders.entries.size === 0}
+            <div class="px-2 py-1 text-fg-faint italic">No reminders yet</div>
+          {:else}
+            <RemindersTree />
+          {/if}
+        </div>
+
         <div class="flex-1 flex flex-col min-h-0">
           <div class="group px-2 py-1 flex items-center justify-between shrink-0">
             <span class="text-xs uppercase tracking-wide text-fg-subtle">Notes</span>
@@ -389,6 +422,7 @@
 
 <CommandPalette />
 <SearchOverlay />
+<NewReminderDialog />
 
 {#if ui.openTaskPath}
   <div
