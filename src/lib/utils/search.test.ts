@@ -1,5 +1,11 @@
 import { describe, it, expect } from "vitest";
-import { buildSnippet, frontmatterText, searchEntries } from "./search";
+import {
+  buildSnippet,
+  frontmatterText,
+  highlightMatches,
+  queryTokens,
+  searchEntries,
+} from "./search";
 import type { VaultEntry } from "$lib/api/vault";
 
 function task(path: string, title: string, fmExtra: Record<string, unknown> = {}): VaultEntry {
@@ -98,5 +104,56 @@ describe("searchEntries", () => {
   it("respects the limit argument", () => {
     const many = Array.from({ length: 100 }, (_, i) => task(`/v/x${i}.md`, `same word ${i}`));
     expect(searchEntries(many, new Map(), "same", 10)).toHaveLength(10);
+  });
+});
+
+describe("queryTokens", () => {
+  it("splits on whitespace and lowercases", () => {
+    expect(queryTokens("  Foo  Bar  ")).toEqual(["foo", "bar"]);
+  });
+  it("returns [] for empty/whitespace", () => {
+    expect(queryTokens("")).toEqual([]);
+    expect(queryTokens("   ")).toEqual([]);
+  });
+});
+
+describe("highlightMatches", () => {
+  it("returns escaped text untouched when no tokens", () => {
+    expect(highlightMatches("Hello <world>", [])).toBe("Hello &lt;world&gt;");
+  });
+  it("wraps each occurrence of a single token", () => {
+    expect(highlightMatches("foo bar foo", ["foo"])).toBe(
+      `<mark class="search-hit">foo</mark> bar <mark class="search-hit">foo</mark>`,
+    );
+  });
+  it("matches case-insensitively but preserves original casing in the mark", () => {
+    expect(highlightMatches("Foo and FOO", ["foo"])).toBe(
+      `<mark class="search-hit">Foo</mark> and <mark class="search-hit">FOO</mark>`,
+    );
+  });
+  it("wraps any of multiple tokens", () => {
+    expect(highlightMatches("alpha beta gamma", ["alpha", "gamma"])).toBe(
+      `<mark class="search-hit">alpha</mark> beta <mark class="search-hit">gamma</mark>`,
+    );
+  });
+  it("prefers the longer token when two overlap (e.g. foo vs foobar)", () => {
+    expect(highlightMatches("foobar", ["foo", "foobar"])).toBe(
+      `<mark class="search-hit">foobar</mark>`,
+    );
+  });
+  it("escapes regex special characters in tokens", () => {
+    expect(highlightMatches("a.b a+b", ["a.b"])).toBe(
+      `<mark class="search-hit">a.b</mark> a+b`,
+    );
+  });
+  it("escapes HTML in surrounding text and matched substring", () => {
+    expect(highlightMatches("<script>foo", ["foo"])).toBe(
+      `&lt;script&gt;<mark class="search-hit">foo</mark>`,
+    );
+  });
+  it("ignores empty tokens", () => {
+    expect(highlightMatches("foo bar", ["", " ", "foo"])).toBe(
+      `<mark class="search-hit">foo</mark> bar`,
+    );
   });
 });

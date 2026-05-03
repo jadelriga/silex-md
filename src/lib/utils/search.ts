@@ -36,6 +36,57 @@ export function buildSnippet(body: string, query: string, span = 120): string {
   return snippet;
 }
 
+function escapeHtml(s: string): string {
+  return s.replace(/[&<>"']/g, (c) => {
+    switch (c) {
+      case "&":
+        return "&amp;";
+      case "<":
+        return "&lt;";
+      case ">":
+        return "&gt;";
+      case '"':
+        return "&quot;";
+      case "'":
+        return "&#39;";
+      default:
+        return c;
+    }
+  });
+}
+
+function escapeRegExp(s: string): string {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+/**
+ * Wrap each occurrence of any query token in `text` with `<mark class="search-hit">`.
+ * Matches are case-insensitive. The returned string is HTML-escaped — render with
+ * `{@html ...}` in the consumer.
+ */
+export function highlightMatches(text: string, tokens: string[]): string {
+  const cleaned = tokens.map((t) => t.trim()).filter(Boolean);
+  if (cleaned.length === 0) return escapeHtml(text);
+  // Sort by length desc so "foobar" wins over "foo" if both are in the query.
+  const sorted = [...cleaned].sort((a, b) => b.length - a.length);
+  const re = new RegExp(`(${sorted.map(escapeRegExp).join("|")})`, "gi");
+  let out = "";
+  let lastIndex = 0;
+  for (const match of text.matchAll(re)) {
+    const start = match.index ?? 0;
+    out += escapeHtml(text.slice(lastIndex, start));
+    out += `<mark class="search-hit">${escapeHtml(match[0])}</mark>`;
+    lastIndex = start + match[0].length;
+  }
+  out += escapeHtml(text.slice(lastIndex));
+  return out;
+}
+
+/** Tokens used both for filtering and highlighting — single source of truth. */
+export function queryTokens(query: string): string[] {
+  return query.trim().toLowerCase().split(/\s+/).filter(Boolean);
+}
+
 export function searchEntries(
   entries: VaultEntry[],
   bodies: Map<string, string>,

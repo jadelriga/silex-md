@@ -6,7 +6,12 @@
   import { notes } from "$lib/stores/notes.svelte";
   import { vault } from "$lib/stores/vault.svelte";
   import { bodies } from "$lib/stores/bodies.svelte";
-  import { searchEntries, type SearchHit } from "$lib/utils/search";
+  import {
+    searchEntries,
+    highlightMatches,
+    queryTokens,
+    type SearchHit,
+  } from "$lib/utils/search";
   import { noteHref, noteRelativePath } from "$lib/utils/notePath";
 
   let query = $state("");
@@ -21,6 +26,8 @@
   const hits = $derived<SearchHit[]>(
     query.trim() ? searchEntries(allEntries, bodies.cache, query) : [],
   );
+
+  const tokens = $derived(queryTokens(query));
 
   $effect(() => {
     if (selectedIndex >= hits.length) selectedIndex = 0;
@@ -133,12 +140,14 @@
                     <span class="text-xs uppercase tracking-wide w-12 shrink-0 {kindColor[hit.kind]}">
                       {hit.kind}
                     </span>
-                    <span class="flex-1 truncate text-fg">{hit.title}</span>
+                    <span class="flex-1 truncate text-fg"
+                      >{@html highlightMatches(hit.title, tokens)}</span
+                    >
                     <span class="text-xs text-fg-subtle truncate max-w-[40%]">{hit.hint}</span>
                   </div>
                   {#if hit.snippet}
                     <div class="pl-[3.75rem] text-xs text-fg-subtle truncate">
-                      {hit.snippet}
+                      {@html highlightMatches(hit.snippet, tokens)}
                     </div>
                   {/if}
                 </button>

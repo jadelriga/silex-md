@@ -82,6 +82,18 @@
   }
 }
 
+/* Search-overlay match highlight. Translucent amber so it pops against the
+   row's hover/selected background without losing the underlying text colour. */
+mark.search-hit {
+  background: rgba(245, 197, 24, 0.28);
+  color: inherit;
+  border-radius: 2px;
+  padding: 0 1px;
+}
+.theme-light mark.search-hit {
+  background: rgba(245, 197, 24, 0.45);
+}
+
 /* Force the bundled Nerd Font on CodeMirror so the editor matches the
    terminal. CodeMirror's default font-family is `monospace` (generic). */
 .cm-editor,
