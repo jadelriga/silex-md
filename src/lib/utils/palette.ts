@@ -25,6 +25,8 @@ export interface PaletteSources {
   setThemePref?: (pref: "system" | "light" | "dark") => void;
   startCreating?: (kind: "board" | "note" | "folder") => void;
   openNewReminder?: () => void;
+  openSettings?: () => void;
+  revealSettings?: () => void;
 }
 
 export function buildPaletteItems(s: PaletteSources): PaletteItem[] {
@@ -138,6 +140,33 @@ export function buildPaletteItems(s: PaletteSources): PaletteItem[] {
       label: "New reminder…",
       search: "new reminder create action",
       run: () => openNewReminder(),
+    });
+  }
+
+  // Command: open settings
+  if (s.openSettings) {
+    const openSettings = s.openSettings;
+    items.push({
+      id: "action:open-settings",
+      kind: "action",
+      category: "command",
+      label: "Open settings…",
+      hint: "⌘,",
+      search: "open settings preferences action",
+      run: () => openSettings(),
+    });
+  }
+
+  // Command: reveal settings file in Finder
+  if (s.revealSettings) {
+    const revealSettings = s.revealSettings;
+    items.push({
+      id: "action:reveal-settings",
+      kind: "action",
+      category: "command",
+      label: "Reveal settings file",
+      search: "reveal settings file finder json action",
+      run: () => revealSettings(),
     });
   }
 

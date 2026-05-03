@@ -37,6 +37,8 @@ pub fn build_menu(app: &AppHandle) -> tauri::Result<Menu<Wry>> {
     let new_folder = MenuItemBuilder::with_id("new-folder", "New Folder").build(app)?;
     let new_reminder = MenuItemBuilder::with_id("new-reminder", "New Reminder").build(app)?;
     let open_vault = MenuItemBuilder::with_id("open-vault", "Open Vault…").build(app)?;
+    let reveal_settings =
+        MenuItemBuilder::with_id("reveal-settings", "Reveal Settings File").build(app)?;
 
     let file_menu = SubmenuBuilder::new(app, "File")
         .item(&new_note)
@@ -45,6 +47,7 @@ pub fn build_menu(app: &AppHandle) -> tauri::Result<Menu<Wry>> {
         .item(&new_reminder)
         .separator()
         .item(&open_vault)
+        .item(&reveal_settings)
         .build()?;
 
     let find = MenuItemBuilder::with_id("find", "Find…")

@@ -26,6 +26,9 @@
   import RenameInput from "$lib/components/RenameInput.svelte";
   import ContextMenu from "$lib/components/ContextMenu.svelte";
   import ConfirmDialog from "$lib/components/ConfirmDialog.svelte";
+  import SettingsModal from "$lib/components/SettingsModal.svelte";
+  import { revealItemInDir } from "@tauri-apps/plugin-opener";
+  import { appDataDir, join } from "@tauri-apps/api/path";
   import { withContextMenu } from "$lib/utils/contextMenu";
   import { confirm } from "$lib/stores/confirm.svelte";
   import { goto } from "$app/navigation";
@@ -78,7 +81,16 @@
     startSync().then((u) => (unlistenSync = u));
     startMenuListener({
       preferences: () => {
-        console.warn("Settings UI not yet implemented");
+        ui.settingsOpen = !ui.settingsOpen;
+      },
+      "reveal-settings": async () => {
+        try {
+          const dir = await appDataDir();
+          const path = await join(dir, "settings.json");
+          await revealItemInDir(path);
+        } catch (e) {
+          console.error("reveal-settings failed", e);
+        }
       },
       "new-note": () => {
         ui.creating = "note";
@@ -525,6 +537,7 @@
 <NewReminderDialog />
 <ContextMenu />
 <ConfirmDialog />
+<SettingsModal />
 
 {#if ui.openTaskPath}
   <div

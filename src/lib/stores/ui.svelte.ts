@@ -18,6 +18,7 @@ class UiStore {
   openTaskPath = $state<string | null>(null);
   paletteMode = $state<PaletteMode>(null);
   searchOpen = $state(false);
+  settingsOpen = $state(false);
   creating = $state<CreatingKind>(null);
   notesDrag = $state<NotesDrag | null>(null);
   notesDragOver = $state<string | null>(null);

@@ -11,6 +11,7 @@
     "core:window:allow-set-theme",
     "dialog:default",
     "store:default",
-    "notification:default"
+    "notification:default",
+    "opener:allow-reveal-item-in-dir"
   ]
 }

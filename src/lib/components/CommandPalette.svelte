@@ -8,6 +8,8 @@
   import { vault } from "$lib/stores/vault.svelte";
   import { theme } from "$lib/stores/theme.svelte";
   import { buildPaletteItems, filterPaletteItems, type PaletteItem } from "$lib/utils/palette";
+  import { revealItemInDir } from "@tauri-apps/plugin-opener";
+  import { appDataDir, join } from "@tauri-apps/api/path";
 
   let query = $state("");
   let selectedIndex = $state(0);
@@ -25,6 +27,16 @@
       setThemePref: (pref) => void theme.setPref(pref),
       startCreating: (kind) => (ui.creating = kind),
       openNewReminder: () => (ui.newReminder = {}),
+      openSettings: () => (ui.settingsOpen = true),
+      revealSettings: async () => {
+        try {
+          const dir = await appDataDir();
+          const path = await join(dir, "settings.json");
+          await revealItemInDir(path);
+        } catch (e) {
+          console.error("reveal settings failed", e);
+        }
+      },
     }),
   );
 

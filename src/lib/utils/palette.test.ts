@@ -149,6 +149,22 @@ describe("buildPaletteItems", () => {
     expect(openNewReminder).toHaveBeenCalled();
   });
 
+  it("emits open-settings + reveal-settings when their callbacks are provided", () => {
+    const openSettings = vi.fn();
+    const revealSettings = vi.fn();
+    const items = buildPaletteItems(makeSources({ openSettings, revealSettings }));
+    items.find((i) => i.id === "action:open-settings")?.run();
+    items.find((i) => i.id === "action:reveal-settings")?.run();
+    expect(openSettings).toHaveBeenCalled();
+    expect(revealSettings).toHaveBeenCalled();
+  });
+
+  it("omits settings actions when their callbacks are not provided", () => {
+    const items = buildPaletteItems(makeSources({}));
+    expect(items.find((i) => i.id === "action:open-settings")).toBeUndefined();
+    expect(items.find((i) => i.id === "action:reveal-settings")).toBeUndefined();
+  });
+
   it("categorizes navigation items: boards, tasks, notes", () => {
     const items = buildPaletteItems(
       makeSources({
