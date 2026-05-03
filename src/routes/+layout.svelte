@@ -40,6 +40,11 @@
 
   let notesExpanded = $state(new Set<string>());
   let renamingBoard = $state<string | null>(null);
+  let terminalEverOpened = $state(false);
+
+  $effect(() => {
+    if (ui.terminalOpen) terminalEverOpened = true;
+  });
 
   function startTerminalResize(e: MouseEvent) {
     e.preventDefault();
@@ -494,38 +499,45 @@
         </div>
       </nav>
     </aside>
-    <main class="flex-1 overflow-auto flex flex-col min-w-0">
-      {@render children()}
-    </main>
-  </div>
+    <div class="flex-1 flex flex-col min-w-0">
+      <main class="flex-1 overflow-auto flex flex-col min-h-0">
+        {@render children()}
+      </main>
 
-  {#if ui.terminalOpen}
-    <section
-      class="shrink-0 border-t border-border bg-surface-deep text-fg font-mono text-sm flex flex-col"
-      style="height: {settings.terminalHeight}px"
-    >
-      <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
-      <div
-        role="separator"
-        aria-orientation="horizontal"
-        onmousedown={startTerminalResize}
-        class="h-1 -mt-0.5 cursor-ns-resize hover:bg-surface-3 shrink-0"
-      ></div>
-      <div class="flex items-center justify-between px-3 py-1 border-b border-border text-xs text-fg-subtle">
-        <span>Terminal</span>
-        <button
-          onclick={() => (ui.terminalOpen = false)}
-          class="hover:text-fg"
-          aria-label="Close terminal panel"
+      <!-- Terminal panel: mounted once on first open and hidden via
+           display:none on subsequent toggles, so the PTY survives Cmd+J
+           without restarting the shell. Lives in the right-of-sidebar
+           column so the panel doesn't bleed under the sidebar. -->
+      {#if terminalEverOpened}
+        <section
+          class:hidden={!ui.terminalOpen}
+          class="shrink-0 border-t border-border bg-surface-deep text-fg font-mono text-sm flex flex-col"
+          style="height: {settings.terminalHeight}px"
         >
-          close
-        </button>
-      </div>
-      <div class="flex-1 min-h-0">
-        <Terminal />
-      </div>
-    </section>
-  {/if}
+          <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
+          <div
+            role="separator"
+            aria-orientation="horizontal"
+            onmousedown={startTerminalResize}
+            class="h-1 -mt-0.5 cursor-ns-resize hover:bg-surface-3 shrink-0"
+          ></div>
+          <div class="flex items-center justify-between px-3 py-1 border-b border-border text-xs text-fg-subtle">
+            <span>Terminal</span>
+            <button
+              onclick={() => (ui.terminalOpen = false)}
+              class="hover:text-fg"
+              aria-label="Close terminal panel"
+            >
+              close
+            </button>
+          </div>
+          <div class="flex-1 min-h-0">
+            <Terminal />
+          </div>
+        </section>
+      {/if}
+    </div>
+  </div>
 </div>
 
 {#if vault.isLoaded && !vault.path}
