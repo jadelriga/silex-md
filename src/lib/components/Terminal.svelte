@@ -25,6 +25,15 @@
     const xterm = await import("@xterm/xterm");
     const fitMod = await import("@xterm/addon-fit");
 
+    // xterm measures glyph width once at construction; if the bundled font
+    // hasn't loaded yet, the measurement is wrong and Nerd Font glyphs render
+    // at the wrong stride. Wait until the browser has the font in cache.
+    try {
+      await document.fonts.load('13px "JetBrainsMono Nerd Font"');
+    } catch {
+      // ignore — fall back to system monospace if the font fails to load
+    }
+
     term = new xterm.Terminal({
       theme: {
         background: "#000000",
@@ -32,7 +41,7 @@
         cursor: "#e5e5e5",
         selectionBackground: "#404040",
       },
-      fontFamily: 'ui-monospace, "SF Mono", Menlo, monospace',
+      fontFamily: '"JetBrainsMono Nerd Font", ui-monospace, "SF Mono", Menlo, monospace',
       fontSize: 13,
       cursorBlink: true,
       convertEol: true,

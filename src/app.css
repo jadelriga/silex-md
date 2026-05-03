@@ -2,9 +2,44 @@
 @plugin "@tailwindcss/typography";
 @import "@event-calendar/core/index.css";
 
+/* JetBrains Mono Nerd Font Mono — bundled for terminal + code editor + ```code``` blocks.
+   The "Mono" variant keeps every glyph (including the Nerd Fonts icons) at the same
+   advance width, which matters for terminal alignment. font-display: swap so the UI
+   doesn't block on the ~2.4MB-per-file load. */
+@font-face {
+  font-family: "JetBrainsMono Nerd Font";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("/fonts/JetBrainsMonoNerdFontMono-Regular.ttf") format("truetype");
+}
+@font-face {
+  font-family: "JetBrainsMono Nerd Font";
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: url("/fonts/JetBrainsMonoNerdFontMono-Italic.ttf") format("truetype");
+}
+@font-face {
+  font-family: "JetBrainsMono Nerd Font";
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("/fonts/JetBrainsMonoNerdFontMono-Bold.ttf") format("truetype");
+}
+@font-face {
+  font-family: "JetBrainsMono Nerd Font";
+  font-style: italic;
+  font-weight: 700;
+  font-display: swap;
+  src: url("/fonts/JetBrainsMonoNerdFontMono-BoldItalic.ttf") format("truetype");
+}
+
 /* Theme tokens. Default block matches the existing dark UI; .theme-light
    overrides for the light variant once we wire the toggle in step 15.6. */
 @theme {
+  --font-mono: "JetBrainsMono Nerd Font", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+
   --color-surface: rgb(10 10 10);
   --color-surface-1: rgb(23 23 23);
   --color-surface-2: rgb(38 38 38);
@@ -60,4 +95,20 @@
   button:not(:disabled) {
     cursor: pointer;
   }
+}
+
+/* Force the bundled Nerd Font on CodeMirror and prose code blocks so the
+   editor and rendered Markdown match the terminal. CodeMirror's default
+   font-family is `monospace` (generic); prose uses its own monospace token. */
+.cm-editor,
+.cm-editor .cm-content,
+.cm-editor .cm-gutters,
+.cm-editor .cm-tooltip,
+.prose code,
+.prose pre,
+.prose pre code,
+.prose-invert code,
+.prose-invert pre,
+.prose-invert pre code {
+  font-family: var(--font-mono);
 }
