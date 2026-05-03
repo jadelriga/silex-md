@@ -25,20 +25,14 @@
     const xterm = await import("@xterm/xterm");
     const fitMod = await import("@xterm/addon-fit");
 
-    // xterm builds its glyph atlas at construction time from canvas-measured
-    // glyphs; if the bundled font isn't fetched and parsed yet, the atlas is
-    // built with the fallback font and Nerd Font icons render as missing-glyph
-    // diamonds. Force-load all four variants with text that covers Latin +
-    // Nerd Font PUA, then await `document.fonts.ready` as a backstop.
+    // xterm measures glyph width at construction time; if the bundled font
+    // hasn't been fetched yet, the canvas falls back to system mono and Nerd
+    // icons measure at the wrong stride. Wait for the two weights we ship.
     try {
-      const sample = "Aa1";
       await Promise.all([
-        document.fonts.load('400 13px "JetBrainsMono Nerd Font"', sample),
-        document.fonts.load('700 13px "JetBrainsMono Nerd Font"', sample),
-        document.fonts.load('italic 400 13px "JetBrainsMono Nerd Font"', sample),
-        document.fonts.load('italic 700 13px "JetBrainsMono Nerd Font"', sample),
+        document.fonts.load('400 13px "JetBrainsMono Nerd Font"', "Aa1"),
+        document.fonts.load('700 13px "JetBrainsMono Nerd Font"', "Aa1"),
       ]);
-      await document.fonts.load('400 13px "Symbols Nerd Font"', "Aa1");
       await document.fonts.ready;
     } catch (err) {
       console.warn("Nerd Font failed to preload, falling back to system mono", err);
@@ -51,8 +45,7 @@
         cursor: "#e5e5e5",
         selectionBackground: "#404040",
       },
-      fontFamily:
-        '"JetBrainsMono Nerd Font", "Symbols Nerd Font", ui-monospace, "SF Mono", Menlo, monospace',
+      fontFamily: '"JetBrainsMono Nerd Font", ui-monospace, "SF Mono", Menlo, monospace',
       fontSize: 13,
       cursorBlink: true,
       convertEol: true,
@@ -60,10 +53,6 @@
     fitAddon = new fitMod.FitAddon();
     term.loadAddon(fitAddon);
     term.open(container);
-    // Force the renderer to throw away any glyph atlas it built before the
-    // bundled fonts were applied — otherwise icons keep rendering as missing-
-    // glyph diamonds even though `document.fonts.check` returns true.
-    (term as { clearTextureAtlas?: () => void }).clearTextureAtlas?.();
     fit();
 
     try {
