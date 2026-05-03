@@ -1,4 +1,5 @@
 mod commands;
+mod menu;
 mod pty;
 
 use commands::{
@@ -17,6 +18,14 @@ pub fn run() {
         .plugin(tauri_plugin_dialog::init())
         .manage(WatcherState::new())
         .manage(PtyState::new())
+        .setup(|app| {
+            let m = menu::build_menu(app.handle())?;
+            app.set_menu(m)?;
+            Ok(())
+        })
+        .on_menu_event(|app, event| {
+            menu::handle_menu_event(app, event.id().as_ref());
+        })
         .invoke_handler(tauri::generate_handler![
             read_vault,
             read_entry,

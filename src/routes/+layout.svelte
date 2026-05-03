@@ -12,6 +12,7 @@
   import { settings } from "$lib/stores/settings.svelte";
   import { vaultApi } from "$lib/api/vault";
   import { startSync } from "$lib/sync";
+  import { startMenuListener } from "$lib/utils/menuListener";
   import { startScheduler, stopScheduler, runCheckNow } from "$lib/scheduler";
   import VaultSetup from "$lib/components/VaultSetup.svelte";
   import TaskDetailPanel from "$lib/components/TaskDetailPanel.svelte";
@@ -29,7 +30,7 @@
   import { confirm } from "$lib/stores/confirm.svelte";
   import { goto } from "$app/navigation";
   import { noteHref, noteRelativePath } from "$lib/utils/notePath";
-  import { ask } from "@tauri-apps/plugin-dialog";
+  import { ask, open as openDialog } from "@tauri-apps/plugin-dialog";
   import { fly } from "svelte/transition";
   import { quintOut } from "svelte/easing";
   import type { UnlistenFn } from "@tauri-apps/api/event";
@@ -72,10 +73,68 @@
     vault.load();
     void theme.load();
     void settings.load();
-    let unlisten: UnlistenFn | null = null;
-    startSync().then((u) => (unlisten = u));
+    let unlistenSync: UnlistenFn | null = null;
+    let unlistenMenu: UnlistenFn | null = null;
+    startSync().then((u) => (unlistenSync = u));
+    startMenuListener({
+      preferences: () => {
+        console.warn("Settings UI not yet implemented");
+      },
+      "new-note": () => {
+        ui.creating = "note";
+      },
+      "new-board": () => {
+        ui.creating = "board";
+      },
+      "new-folder": () => {
+        ui.creating = "folder";
+      },
+      "new-reminder": () => {
+        ui.newReminder = {};
+      },
+      "open-vault": async () => {
+        const selected = await openDialog({
+          directory: true,
+          multiple: false,
+          title: "Choose vault folder",
+        });
+        if (typeof selected === "string") await vault.set(selected);
+      },
+      find: () => {
+        if (ui.searchOpen) {
+          ui.searchOpen = false;
+        } else {
+          ui.paletteMode = null;
+          ui.searchOpen = true;
+        }
+      },
+      palette: () => {
+        if (ui.paletteMode === "navigation") {
+          ui.paletteMode = null;
+        } else {
+          ui.searchOpen = false;
+          ui.paletteMode = "navigation";
+        }
+      },
+      commands: () => {
+        if (ui.paletteMode === "command") {
+          ui.paletteMode = null;
+        } else {
+          ui.searchOpen = false;
+          ui.paletteMode = "command";
+        }
+      },
+      "toggle-terminal": () => {
+        ui.terminalOpen = !ui.terminalOpen;
+      },
+      calendar: () => goto("/calendar"),
+      "theme-system": () => void theme.setPref("system"),
+      "theme-light": () => void theme.setPref("light"),
+      "theme-dark": () => void theme.setPref("dark"),
+    }).then((u) => (unlistenMenu = u));
     return () => {
-      unlisten?.();
+      unlistenSync?.();
+      unlistenMenu?.();
       stopScheduler();
     };
   });
@@ -105,41 +164,6 @@
 
   $effect(() => {
     const handler = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "j") {
-        e.preventDefault();
-        ui.terminalOpen = !ui.terminalOpen;
-        return;
-      }
-      if ((e.metaKey || e.ctrlKey) && !e.shiftKey && e.key.toLowerCase() === "p") {
-        e.preventDefault();
-        if (ui.paletteMode === "navigation") {
-          ui.paletteMode = null;
-        } else {
-          ui.searchOpen = false;
-          ui.paletteMode = "navigation";
-        }
-        return;
-      }
-      if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key.toLowerCase() === "p") {
-        e.preventDefault();
-        if (ui.paletteMode === "command") {
-          ui.paletteMode = null;
-        } else {
-          ui.searchOpen = false;
-          ui.paletteMode = "command";
-        }
-        return;
-      }
-      if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key.toLowerCase() === "f") {
-        e.preventDefault();
-        if (ui.searchOpen) {
-          ui.searchOpen = false;
-        } else {
-          ui.paletteMode = null;
-          ui.searchOpen = true;
-        }
-        return;
-      }
       if (
         e.key === "Escape" &&
         ui.openTaskPath &&

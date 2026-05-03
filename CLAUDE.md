@@ -120,8 +120,9 @@ Forward-looking grouping of remaining post-v1 polish work. Each phase is roughly
 - [x] **SILEX home banner.** Closed without changes — the existing Unicode box-drawing banner is acceptable. Revisit if it ever looks broken on a target platform.
 
 ### Phase 3 — Settings + terminal quality of life
-- [ ] **Settings editor UI.** Surface `themePref`, `terminalHeight`, future `notificationLeadTime`, terminal font, etc. Either a route (`/settings`) or a dialog. Backed by the existing `settings.svelte.ts` store.
-- [ ] **Terminal glyph coverage.** Bundle a Nerd Font (or JetBrains Mono via `@fontsource`), make font configurable in settings.
+- [x] **Native menu bar.** `src-tauri/src/menu.rs` builds a Tauri menu (Silex / File / Edit / View / Window) with accelerators on the items the JS already handled (Cmd+J, Cmd+P, Cmd+Shift+P, Cmd+Shift+F, Cmd+,). Items emit `menu:<id>` Tauri events; `src/lib/utils/menuListener.ts` `startMenuListener(actions)` listens and dispatches. Layout `onMount` wires every action (creating flows, search/palette/commands toggles, terminal toggle, calendar nav, theme submenu, open vault). The redundant JS keydown handlers for shortcut keys were removed in favour of OS-level accelerators (only Esc-closes-task-panel remains in JS). Preferences… (Cmd+,) currently console-warns; the modal is wired in the next item.
+- [ ] **Settings modal + Reveal settings file.** Cmd+, opens a modal (not a route — keeps the sidebar clean since the user prefers settings.json invisible there). Backed by the existing `settings.json` (Tauri store plugin, lives in app data dir, not in the vault). Surface theme + terminal font; "Reveal Settings File" palette/menu action opens the directory in Finder via `tauri-plugin-opener` (re-added for this).
+- [ ] **Terminal glyph coverage.** Bundle JetBrains Mono Nerd Font; apply everywhere monospace is used (terminal + CodeMirror + markdown ```code``` blocks). Default font in settings.
 - [ ] **Persistent terminal session.** Hoist `<Terminal />` mount above the `{#if ui.terminalOpen}` so toggling the panel doesn't kill the PTY (use `display: none` to hide).
 
 ### Phase 4 — Search + calendar polish
