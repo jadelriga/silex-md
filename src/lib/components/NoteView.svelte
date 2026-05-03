@@ -5,9 +5,7 @@
   import { vaultApi } from "$lib/api/vault";
   import { syncEvents } from "$lib/stores/syncEvents.svelte";
   import { buildTaskContent } from "$lib/utils/yaml";
-  import { toggleCheckboxAtIndex } from "$lib/utils/checkbox";
   import CodeMirrorEditor from "./CodeMirrorEditor.svelte";
-  import MarkdownPreview from "./MarkdownPreview.svelte";
 
   let { path }: { path: string } = $props();
 
@@ -24,7 +22,6 @@
   let saveError = $state<string | null>(null);
   let externalChangeWhileDirty = $state(false);
   let lastSavedAt = $state(0);
-  let editMode = $state(false);
   let lastLoadedPath = $state<string | null>(null);
 
   let saveTimer: ReturnType<typeof setTimeout> | null = null;
@@ -111,11 +108,6 @@
     bodyDraft = next;
     scheduleSave();
   }
-
-  function onToggleCheckbox(index: number) {
-    bodyDraft = toggleCheckboxAtIndex(bodyDraft, index);
-    scheduleSave();
-  }
 </script>
 
 <div class="h-full flex flex-col bg-surface">
@@ -158,12 +150,6 @@
         {:else if bodyLoaded}
           <span>saved</span>
         {/if}
-        <button
-          onclick={() => (editMode = !editMode)}
-          class="text-fg-muted hover:text-fg"
-        >
-          {editMode ? "preview" : "edit"}
-        </button>
       </div>
     </div>
 
@@ -174,30 +160,8 @@
     <div class="flex-1 min-h-0 overflow-auto">
       {#if !bodyLoaded}
         <div class="p-6 text-fg-subtle text-sm">Loading…</div>
-      {:else if editMode}
-        <CodeMirrorEditor value={bodyDraft} onChange={onBodyChange} />
       {:else}
-        <div
-          role="textbox"
-          tabindex="0"
-          ondblclick={() => (editMode = true)}
-          onkeydown={(e) => {
-            if (e.key === "Enter") {
-              e.preventDefault();
-              editMode = true;
-            }
-          }}
-          class="cursor-text h-full min-h-full"
-          title="Double-click or press Enter to edit"
-        >
-          {#if bodyDraft.trim() === ""}
-            <div class="px-6 py-4 text-fg-faint italic select-none">
-              Empty. Double-click or press Enter to start writing.
-            </div>
-          {:else}
-            <MarkdownPreview source={bodyDraft} {onToggleCheckbox} />
-          {/if}
-        </div>
+        <CodeMirrorEditor value={bodyDraft} onChange={onBodyChange} />
       {/if}
     </div>
   {/if}

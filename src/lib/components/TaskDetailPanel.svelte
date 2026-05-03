@@ -6,10 +6,8 @@
   import { syncEvents } from "$lib/stores/syncEvents.svelte";
   import { buildTaskContent } from "$lib/utils/yaml";
   import { clickOutside } from "$lib/utils/clickOutside";
-  import { toggleCheckboxAtIndex } from "$lib/utils/checkbox";
   import { formatReminder } from "$lib/utils/reminder";
   import CodeMirrorEditor from "./CodeMirrorEditor.svelte";
-  import MarkdownPreview from "./MarkdownPreview.svelte";
   import ReminderPopover from "./ReminderPopover.svelte";
 
   let { path }: { path: string } = $props();
@@ -34,7 +32,6 @@
   let lastSavedAt = $state(0);
 
   let saveTimer: ReturnType<typeof setTimeout> | null = null;
-  let editMode = $state(false);
 
   const dirty = $derived(
     bodyLoaded &&
@@ -141,11 +138,6 @@
     bodyDraft = next;
     scheduleSave();
   }
-
-  function onToggleCheckbox(index: number) {
-    bodyDraft = toggleCheckboxAtIndex(bodyDraft, index);
-    scheduleSave();
-  }
 </script>
 
 <aside
@@ -156,17 +148,9 @@
     class="flex items-center justify-between px-4 py-2 border-b border-border text-xs text-fg-subtle"
   >
     <span class="truncate" title={path}>{path}</span>
-    <div class="flex items-center gap-3">
-      <button
-        onclick={() => (editMode = !editMode)}
-        class="text-fg-muted hover:text-fg"
-      >
-        {editMode ? "preview" : "edit"}
-      </button>
-      <button onclick={close} class="text-fg-muted hover:text-fg" aria-label="Close">
-        close
-      </button>
-    </div>
+    <button onclick={close} class="text-fg-muted hover:text-fg" aria-label="Close">
+      close
+    </button>
   </header>
 
   {#if !entry}
@@ -316,30 +300,8 @@
     <div class="flex-1 min-h-0 overflow-auto">
       {#if !bodyLoaded}
         <div class="p-4 text-fg-subtle text-sm">Loading…</div>
-      {:else if editMode}
-        <CodeMirrorEditor value={bodyDraft} onChange={onBodyChange} />
       {:else}
-        <div
-          role="textbox"
-          tabindex="0"
-          ondblclick={() => (editMode = true)}
-          onkeydown={(e) => {
-            if (e.key === "Enter") {
-              e.preventDefault();
-              editMode = true;
-            }
-          }}
-          class="cursor-text h-full min-h-full"
-          title="Double-click or press Enter to edit"
-        >
-          {#if bodyDraft.trim() === ""}
-            <div class="p-4 text-fg-faint italic select-none">
-              Empty. Double-click or press Enter to start writing.
-            </div>
-          {:else}
-            <MarkdownPreview source={bodyDraft} {onToggleCheckbox} />
-          {/if}
-        </div>
+        <CodeMirrorEditor value={bodyDraft} onChange={onBodyChange} />
       {/if}
     </div>
   {/if}

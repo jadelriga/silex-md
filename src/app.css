@@ -1,5 +1,4 @@
 @import "tailwindcss";
-@plugin "@tailwindcss/typography";
 @import "@event-calendar/core/index.css";
 
 /* JetBrains Mono Nerd Font Mono — bundled for terminal + code editor + ```code``` blocks.
@@ -83,20 +82,39 @@
   }
 }
 
-/* Force the bundled Nerd Font on CodeMirror and prose code blocks so the
-   editor and rendered Markdown match the terminal. CodeMirror's default
-   font-family is `monospace` (generic); prose uses its own monospace token. */
+/* Force the bundled Nerd Font on CodeMirror so the editor matches the
+   terminal. CodeMirror's default font-family is `monospace` (generic). */
 .cm-editor,
 .cm-editor .cm-content,
 .cm-editor .cm-gutters,
-.cm-editor .cm-tooltip,
-.prose code,
-.prose pre,
-.prose pre code,
-.prose-invert code,
-.prose-invert pre,
-.prose-invert pre code {
+.cm-editor .cm-tooltip {
   font-family: var(--font-mono);
+}
+
+/* Editor surface uses the deepest theme surface (black in dark, white in
+   light) instead of oneDark's default mid-gray. Stacked .cm-editor selector
+   beats oneDark's class specificity. */
+.cm-editor.cm-editor,
+.cm-editor.cm-editor .cm-content,
+.cm-editor.cm-editor .cm-gutters {
+  background: var(--color-surface-deep);
+}
+
+/* Default body text colour. Code-block tokens come from our HighlightStyle
+   and override this naturally; only unstyled (non-tagged) text picks this up,
+   which means paragraphs, list items, headings — i.e. the prose. */
+.cm-editor.cm-editor .cm-content {
+  color: #ffffff;
+}
+.theme-light .cm-editor.cm-editor .cm-content {
+  color: #000000;
+}
+
+/* Active-line highlight: oneDark's default is a translucent gray that
+   disappears on pure black. Use surface-1 so it's visible but subtle. */
+.cm-editor.cm-editor .cm-activeLine,
+.cm-editor.cm-editor .cm-activeLineGutter {
+  background: var(--color-surface-1) !important;
 }
 
 /* Live-preview decorations for the markdown editor. Classes emitted from
@@ -115,16 +133,24 @@
   border-radius: 3px;
   padding: 0 0.2em;
 }
-.cm-editor .cm-md-heading {
-  font-weight: 700;
-  color: var(--color-fg);
+/* Headings: oneDark colors tags.heading red and underlines them on an inner
+   span. Stacked .cm-editor selector + descendant + !important beats it. */
+.cm-editor.cm-editor .cm-md-heading,
+.cm-editor.cm-editor .cm-md-heading * {
+  font-weight: 700 !important;
+  color: var(--color-fg) !important;
+  text-decoration: none !important;
 }
-.cm-editor .cm-md-h1 { font-size: 1.6em; line-height: 1.25; }
-.cm-editor .cm-md-h2 { font-size: 1.4em; line-height: 1.25; }
-.cm-editor .cm-md-h3 { font-size: 1.2em; line-height: 1.3; }
-.cm-editor .cm-md-h4 { font-size: 1.1em; line-height: 1.35; }
-.cm-editor .cm-md-h5 { font-size: 1.05em; line-height: 1.4; }
-.cm-editor .cm-md-h6 { font-size: 1em; color: var(--color-fg-muted); }
+.cm-editor.cm-editor .cm-md-h1 { font-size: 1.6em; line-height: 1.25; }
+.cm-editor.cm-editor .cm-md-h2 { font-size: 1.4em; line-height: 1.25; }
+.cm-editor.cm-editor .cm-md-h3 { font-size: 1.2em; line-height: 1.3; }
+.cm-editor.cm-editor .cm-md-h4 { font-size: 1.1em; line-height: 1.35; }
+.cm-editor.cm-editor .cm-md-h5 { font-size: 1.05em; line-height: 1.4; }
+.cm-editor.cm-editor .cm-md-h6,
+.cm-editor.cm-editor .cm-md-h6 * {
+  font-size: 1em;
+  color: var(--color-fg-muted) !important;
+}
 .cm-editor .cm-md-link {
   color: var(--color-accent);
   text-decoration: underline;
@@ -166,12 +192,29 @@
 .cm-editor .cm-md-quote-mark {
   color: var(--color-fg-faint);
 }
-.cm-editor .cm-md-fenced {
-  display: inline-block;
+/* Fenced code block as one unified box. cm-md-fenced-line is applied to
+   every visible line of the block (line decorations stack vertically), and
+   first/last get rounded corners so the lines visually merge. */
+.cm-editor.cm-editor .cm-md-fenced-line {
   background: var(--color-surface-2);
-  border-radius: 4px;
-  padding: 0 0.4em;
   font-family: var(--font-mono);
+  padding-left: 0.75em;
+  padding-right: 0.75em;
+}
+.cm-editor.cm-editor .cm-md-fenced-first {
+  border-top-left-radius: 6px;
+  border-top-right-radius: 6px;
+  padding-top: 0.4em;
+}
+.cm-editor.cm-editor .cm-md-fenced-last {
+  border-bottom-left-radius: 6px;
+  border-bottom-right-radius: 6px;
+  padding-bottom: 0.4em;
+}
+/* Fence delimiter line (the ``` line itself) — hidden when cursor isn't
+   inside the block, so the rendered code looks like a clean box. */
+.cm-editor.cm-editor .cm-md-fenced-hide {
+  display: none !important;
 }
 .cm-editor .cm-md-task-checkbox {
   vertical-align: -2px;
@@ -205,56 +248,3 @@
   background-color: rgba(59, 130, 246, 0.35) !important;
 }
 
-/* Preview overrides for @tailwindcss/typography defaults so the preview
-   matches the editor's live-preview style — no backticks around inline
-   code, no surrounding "" quote chars on blockquotes, no forced italic. */
-.prose code::before,
-.prose code::after,
-.prose-invert code::before,
-.prose-invert code::after,
-.prose blockquote::before,
-.prose blockquote::after,
-.prose-invert blockquote::before,
-.prose-invert blockquote::after,
-.prose blockquote p:first-of-type::before,
-.prose blockquote p:last-of-type::after,
-.prose-invert blockquote p:first-of-type::before,
-.prose-invert blockquote p:last-of-type::after {
-  content: none !important;
-}
-
-/* Inline code and code blocks in preview: surface-2 background so they're
-   clearly distinguishable from body text, matching the editor's treatment. */
-.prose code,
-.prose-invert code {
-  background: var(--color-surface-2) !important;
-  color: var(--color-fg) !important;
-  padding: 0.1em 0.3em;
-  border-radius: 3px;
-  font-weight: 400 !important;
-}
-.prose pre,
-.prose-invert pre {
-  background: var(--color-surface-2) !important;
-  color: var(--color-fg) !important;
-}
-.prose pre code,
-.prose-invert pre code {
-  background: transparent !important;
-  padding: 0 !important;
-}
-
-/* Blockquote in preview: no italic, just the left border + indent + muted
-   text. quotes:none suppresses any open/close-quote content fallbacks. */
-.prose blockquote,
-.prose-invert blockquote,
-.prose blockquote *,
-.prose-invert blockquote * {
-  font-style: normal !important;
-  quotes: none;
-}
-.prose blockquote,
-.prose-invert blockquote {
-  border-left-color: var(--color-border-strong) !important;
-  color: var(--color-fg-muted) !important;
-}

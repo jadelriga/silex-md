@@ -273,12 +273,41 @@ function buildDecorations(view: EditorView): DecorationSet {
           }
 
           case "FencedCode": {
-            // Render the whole fence block with monospace + a subtle bg.
-            // Per-language syntax highlighting is intentionally deferred to
-            // a later phase; here we just give it a code-block look.
-            decos.push(
-              Decoration.mark({ class: "cm-md-fenced" }).range(node.from, node.to),
-            );
+            // Per-line decorations so consecutive lines visually merge into a
+            // single code-block box (vs Decoration.mark which renders each
+            // line as its own inline rectangle). When the cursor is outside
+            // the block, also hide the opening/closing fence lines so the
+            // ``` markers don't take up space.
+            const doc = view.state.doc;
+            const startLine = doc.lineAt(node.from).number;
+            const endLine = doc.lineAt(node.to - 1).number;
+
+            if (!cursorNear) {
+              decos.push(
+                Decoration.line({ class: "cm-md-fenced-hide" }).range(
+                  doc.line(startLine).from,
+                ),
+              );
+              if (endLine !== startLine) {
+                decos.push(
+                  Decoration.line({ class: "cm-md-fenced-hide" }).range(
+                    doc.line(endLine).from,
+                  ),
+                );
+              }
+            }
+
+            const visibleStart = cursorNear ? startLine : startLine + 1;
+            const visibleEnd = cursorNear ? endLine : endLine - 1;
+            for (let n = visibleStart; n <= visibleEnd; n++) {
+              const line = doc.line(n);
+              const classes = ["cm-md-fenced-line"];
+              if (n === visibleStart) classes.push("cm-md-fenced-first");
+              if (n === visibleEnd) classes.push("cm-md-fenced-last");
+              decos.push(
+                Decoration.line({ class: classes.join(" ") }).range(line.from),
+              );
+            }
             break;
           }
 
