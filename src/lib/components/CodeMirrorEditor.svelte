@@ -7,6 +7,7 @@
   import { markdown } from "@codemirror/lang-markdown";
   import { oneDark } from "@codemirror/theme-one-dark";
   import { theme } from "$lib/stores/theme.svelte";
+  import { livePreview } from "$lib/editor/livePreview";
 
   let {
     value,
@@ -28,6 +29,7 @@
       syntaxHighlighting(defaultHighlightStyle),
       keymap.of([...defaultKeymap, ...historyKeymap]),
       markdown(),
+      livePreview,
       EditorView.lineWrapping,
       EditorView.updateListener.of((u) => {
         if (u.docChanged && !suppressOnChange) {

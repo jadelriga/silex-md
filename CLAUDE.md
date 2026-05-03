@@ -135,6 +135,20 @@ Forward-looking grouping of remaining post-v1 polish work. Each phase is roughly
 - [ ] **Click-notification → focus task.** Wire `tauri-plugin-notification` action API: payload includes the task path, click handler sets `ui.openTaskPath`.
 - [ ] **Arrow-key card nav** on the board. Non-trivial focus model with svelte-dnd-action — likely needs a dedicated focus-ring abstraction.
 
+### Phase 6 — Live-preview markdown editor (Option C)
+
+User decision (overrides the "stick with Option A" rule in `## Markdown editor alternatives`): replace the preview/edit toggle with an Obsidian-style live-preview editor built on CodeMirror 6 + Lezer decorations. **Hard requirement: byte-perfect preservation** — the document in CM6 stays as raw markdown; decorations are display-only overlays. `view.state.doc.toString()` returns the exact bytes the user typed. This is what makes Option C compatible with the multi-tool workflow (Claude Code via embedded terminal, external editors); Option B (Milkdown) was rejected because ProseMirror serialises a tree on every save, producing byte drift.
+
+Spec lives at `<vault>/boards/silex-backlog/backlog/explore.md`. Three iterations, each its own commit, **with user validation between iterations** (don't roll forward without confirmation):
+
+- [ ] **Iter 1 — Skeleton + minimum scope.** New `src/lib/editor/livePreview.ts` with `ViewPlugin.fromClass`, `RangeSetBuilder<Decoration>`, viewport-respecting walk via `syntaxTree(view.state).iterate({ from, to })` per `view.visibleRanges` chunk, line-based cursor-proximity check (Obsidian feel — reveal markers when cursor is on the same line). Constructs: bold, italic, inline code, ATX headings, links, images (use `convertFileSrc` from `@tauri-apps/api/core` for relative/`file://` paths only, leave web URLs and `data:` URIs alone). CSS classes via `--color-*` tokens; ensure specificity wins over `oneDark`'s built-in markdown highlighting. Toggle still mounted — don't delete `MarkdownPreview` yet.
+- [ ] **Iter 2 — Extended scope.** Task-list checkboxes (interactive widget, click dispatches a CM6 transaction that rewrites `[ ]` ↔ `[x]` — never bypass the editor by mutating `state.doc` directly; lift `toggleCheckboxAtIndex` from `TaskDetailPanel.svelte` and `NoteView.svelte` into a shared util). Bullet + ordered lists, blockquotes. Fenced code blocks rendered with monospace + a slight surface-2 background, **no per-language syntax highlighting** (deferred — see below).
+- [ ] **Iter 3 — Toggle removal.** Delete `src/lib/components/MarkdownPreview.svelte`, drop `editMode` state and the toggle button from `TaskDetailPanel.svelte` and `NoteView.svelte`, remove `marked` + `@tailwindcss/typography` from `package.json` and the `prose` import from `app.css`.
+
+### Phase 7 — Fenced code syntax highlighting (deferred from Phase 6)
+
+- [ ] **Per-language syntax highlighting in fenced code blocks.** Adds `@codemirror/language` + per-language packages (TypeScript, Rust, JSON, shell, …). Decisions to make: which languages ship by default, lazy-load vs. bundle, how the highlight theme integrates with `oneDark` and the light theme. Out of scope for Phase 6 because it's substantial enough on its own and orthogonal to the decoration plugin.
+
 ## Current status
 
 **Step 15 (and the last numbered step) complete.** Implementation order is finished. Polish queue and follow-ups remain.
@@ -405,6 +419,8 @@ If we ever revisit the editor experience, here are the three options on the tabl
 - **When to pick this**: only if the editor becomes the core differentiator we want to spend ongoing effort on. For a kanban app, this is almost certainly not worth it.
 
 **Decision rule going forward**: stick with Option A unless we get explicit, repeated feedback that the toggle is the thing standing in the way of using the app. If we do switch, jump straight to Option B; do not attempt Option C unless the editor is the product.
+
+**Decision (2026-05-03):** moving to **Option C** in Phase 6. The user accepted the engineering cost in exchange for byte-perfect + Obsidian feel. Option B remains rejected because the multi-tool workflow (Claude Code + external editors writing the same `.md` files) makes byte drift a hard no, not a tolerable trade-off. The "don't attempt Option C unless the editor is the product" rule is overridden by this decision — don't relitigate.
 
 **Not yet tested end-to-end:** the Rust commands compile cleanly but haven't been called from the UI yet. Step 5 (Svelte stores) is where they get exercised.
 
