@@ -2,9 +2,9 @@
   import { onMount, onDestroy } from "svelte";
   import { EditorState } from "@codemirror/state";
   import { EditorView, drawSelection, highlightActiveLine, keymap } from "@codemirror/view";
-  import { defaultKeymap, history, historyKeymap } from "@codemirror/commands";
+  import { defaultKeymap, history, historyKeymap, indentWithTab } from "@codemirror/commands";
   import { syntaxHighlighting, defaultHighlightStyle } from "@codemirror/language";
-  import { markdown } from "@codemirror/lang-markdown";
+  import { markdown, markdownLanguage } from "@codemirror/lang-markdown";
   import { oneDark } from "@codemirror/theme-one-dark";
   import { theme } from "$lib/stores/theme.svelte";
   import { livePreview } from "$lib/editor/livePreview";
@@ -27,8 +27,8 @@
       drawSelection(),
       highlightActiveLine(),
       syntaxHighlighting(defaultHighlightStyle),
-      keymap.of([...defaultKeymap, ...historyKeymap]),
-      markdown(),
+      keymap.of([...defaultKeymap, ...historyKeymap, indentWithTab]),
+      markdown({ base: markdownLanguage }),
       livePreview,
       EditorView.lineWrapping,
       EditorView.updateListener.of((u) => {

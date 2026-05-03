@@ -16,9 +16,59 @@ import { convertFileSrc } from "@tauri-apps/api/core";
  * raw markdown intact, so saves are byte-perfect by construction.
  *
  * Iter 1 scope: bold, italic, inline code, ATX headings, links, images.
+ * Iter 2 scope: GFM task checkboxes (interactive widget), bullet/ordered
+ * lists, blockquotes, fenced code blocks (monospace + background, no
+ * per-language syntax highlighting yet — that's Phase 7).
+ *
  * Cursor proximity is line-based (Obsidian feel): syntax markers reveal
  * for every node that overlaps a line containing any selection range.
+ * Checkboxes are an exception — they always render as widgets so the
+ * user can click to toggle without first revealing the brackets.
  */
+
+class CheckboxWidget extends WidgetType {
+  constructor(
+    readonly checked: boolean,
+    readonly from: number,
+    readonly to: number,
+  ) {
+    super();
+  }
+
+  eq(other: CheckboxWidget): boolean {
+    return (
+      other.checked === this.checked &&
+      other.from === this.from &&
+      other.to === this.to
+    );
+  }
+
+  toDOM(view: EditorView): HTMLElement {
+    const input = document.createElement("input");
+    input.type = "checkbox";
+    input.checked = this.checked;
+    input.className = "cm-md-task-checkbox";
+    // Prevent the browser's default checked-toggle so we drive the change via
+    // a CM6 transaction; that keeps the document and atlas in sync and the
+    // edit shows up in the undo history. Also stop propagation: dispatching
+    // detaches this element from the DOM (CM6 rebuilds widgets), and the
+    // panel's clickOutside handler sees a detached target → "outside" →
+    // closes the panel. Stopping propagation is the canonical fix.
+    input.addEventListener("click", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const next = this.checked ? "[ ]" : "[x]";
+      view.dispatch({
+        changes: { from: this.from, to: this.to, insert: next },
+      });
+    });
+    return input;
+  }
+
+  ignoreEvent(): boolean {
+    return false;
+  }
+}
 
 class ImageWidget extends WidgetType {
   constructor(
@@ -176,6 +226,69 @@ function buildDecorations(view: EditorView): DecorationSet {
                 );
               }
             }
+            break;
+          }
+
+          case "Task": {
+            // Lezer GFM Task wraps a list item with a TaskMarker child for the
+            // `[ ]`/`[x]` brackets. Always render as a widget regardless of
+            // cursor proximity — toggling is the common operation and the
+            // user can still edit list-item content around it normally.
+            const marker = node.node.getChild("TaskMarker");
+            if (marker) {
+              const text = view.state.doc.sliceString(marker.from, marker.to);
+              const checked = /\[x\]/i.test(text);
+              decos.push(
+                Decoration.replace({
+                  widget: new CheckboxWidget(checked, marker.from, marker.to),
+                }).range(marker.from, marker.to),
+              );
+            }
+            break;
+          }
+
+          case "ListMark": {
+            // The `-`, `*`, `+`, or `1.` marker. Just dim it; don't replace.
+            decos.push(
+              Decoration.mark({ class: "cm-md-list-mark" }).range(node.from, node.to),
+            );
+            break;
+          }
+
+          case "Blockquote": {
+            // Mark the whole node so we can give it a left border + indent
+            // via CSS. The `>` markers stay visible (we style them subtly
+            // through the QuoteMark case below).
+            decos.push(
+              Decoration.mark({ class: "cm-md-blockquote" }).range(node.from, node.to),
+            );
+            break;
+          }
+
+          case "QuoteMark": {
+            decos.push(
+              Decoration.mark({ class: "cm-md-quote-mark" }).range(node.from, node.to),
+            );
+            break;
+          }
+
+          case "FencedCode": {
+            // Render the whole fence block with monospace + a subtle bg.
+            // Per-language syntax highlighting is intentionally deferred to
+            // a later phase; here we just give it a code-block look.
+            decos.push(
+              Decoration.mark({ class: "cm-md-fenced" }).range(node.from, node.to),
+            );
+            break;
+          }
+
+          case "CodeInfo": {
+            // Language tag after the opening ``` (e.g. `python`). oneDark
+            // tints this a dark blue that's nearly invisible on our
+            // surface-2 code-block background; mark with our own class.
+            decos.push(
+              Decoration.mark({ class: "cm-md-code-info" }).range(node.from, node.to),
+            );
             break;
           }
         }

@@ -145,3 +145,116 @@
 .cm-editor .cm-md-image-source {
   color: var(--color-fg-muted);
 }
+.cm-editor .cm-md-list-mark {
+  color: var(--color-fg-subtle);
+}
+.cm-editor .cm-md-blockquote,
+.cm-editor .cm-md-blockquote * {
+  font-style: normal !important;
+  quotes: none;
+}
+.cm-editor .cm-md-blockquote::before,
+.cm-editor .cm-md-blockquote::after {
+  content: "" !important;
+}
+.cm-editor .cm-md-blockquote {
+  display: inline-block;
+  border-left: 3px solid var(--color-border-strong);
+  padding-left: 0.75em;
+  color: var(--color-fg-muted);
+}
+.cm-editor .cm-md-quote-mark {
+  color: var(--color-fg-faint);
+}
+.cm-editor .cm-md-fenced {
+  display: inline-block;
+  background: var(--color-surface-2);
+  border-radius: 4px;
+  padding: 0 0.4em;
+  font-family: var(--font-mono);
+}
+.cm-editor .cm-md-task-checkbox {
+  vertical-align: -2px;
+  margin: 0 0.25em 0 0;
+  cursor: pointer;
+  accent-color: var(--color-accent);
+}
+
+/* Language tag in fenced code (e.g. `python`). Dark theme uses a brighter
+   blue so it's readable on surface-2; light theme drops to a darker blue.
+   The descendant selector matters — oneDark's syntax token wraps the text
+   in an inner span whose own color rule wins unless we target it too. */
+.cm-editor.cm-editor .cm-md-code-info,
+.cm-editor.cm-editor .cm-md-code-info * {
+  color: #7dd3fc !important;
+}
+.theme-light .cm-editor.cm-editor .cm-md-code-info,
+.theme-light .cm-editor.cm-editor .cm-md-code-info * {
+  color: #0369a1 !important;
+}
+
+/* oneDark's default selection (#3E4451) blends into our surface-2 code
+   background. Override with a brighter, semi-translucent blue so it's
+   visible in code blocks, inline code, and regular text alike. */
+.cm-editor.cm-editor .cm-selectionBackground,
+.cm-editor.cm-editor .cm-content ::selection {
+  background-color: rgba(96, 165, 250, 0.45) !important;
+}
+.theme-light .cm-editor.cm-editor .cm-selectionBackground,
+.theme-light .cm-editor.cm-editor .cm-content ::selection {
+  background-color: rgba(59, 130, 246, 0.35) !important;
+}
+
+/* Preview overrides for @tailwindcss/typography defaults so the preview
+   matches the editor's live-preview style — no backticks around inline
+   code, no surrounding "" quote chars on blockquotes, no forced italic. */
+.prose code::before,
+.prose code::after,
+.prose-invert code::before,
+.prose-invert code::after,
+.prose blockquote::before,
+.prose blockquote::after,
+.prose-invert blockquote::before,
+.prose-invert blockquote::after,
+.prose blockquote p:first-of-type::before,
+.prose blockquote p:last-of-type::after,
+.prose-invert blockquote p:first-of-type::before,
+.prose-invert blockquote p:last-of-type::after {
+  content: none !important;
+}
+
+/* Inline code and code blocks in preview: surface-2 background so they're
+   clearly distinguishable from body text, matching the editor's treatment. */
+.prose code,
+.prose-invert code {
+  background: var(--color-surface-2) !important;
+  color: var(--color-fg) !important;
+  padding: 0.1em 0.3em;
+  border-radius: 3px;
+  font-weight: 400 !important;
+}
+.prose pre,
+.prose-invert pre {
+  background: var(--color-surface-2) !important;
+  color: var(--color-fg) !important;
+}
+.prose pre code,
+.prose-invert pre code {
+  background: transparent !important;
+  padding: 0 !important;
+}
+
+/* Blockquote in preview: no italic, just the left border + indent + muted
+   text. quotes:none suppresses any open/close-quote content fallbacks. */
+.prose blockquote,
+.prose-invert blockquote,
+.prose blockquote *,
+.prose-invert blockquote * {
+  font-style: normal !important;
+  quotes: none;
+}
+.prose blockquote,
+.prose-invert blockquote {
+  border-left-color: var(--color-border-strong) !important;
+  color: var(--color-fg-muted) !important;
+}
