@@ -34,11 +34,21 @@
   font-display: swap;
   src: url("/fonts/JetBrainsMonoNerdFontMono-BoldItalic.ttf") format("truetype");
 }
+/* Per-glyph fallback for any Nerd Font icons that aren't included in the
+   patched JetBrainsMono variant (icon set has grown across releases).
+   Browsers fall back per-glyph when a primary font lacks one. */
+@font-face {
+  font-family: "Symbols Nerd Font";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("/fonts/SymbolsNerdFontMono-Regular.ttf") format("truetype");
+}
 
 /* Theme tokens. Default block matches the existing dark UI; .theme-light
    overrides for the light variant once we wire the toggle in step 15.6. */
 @theme {
-  --font-mono: "JetBrainsMono Nerd Font", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  --font-mono: "JetBrainsMono Nerd Font", "Symbols Nerd Font", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
 
   --color-surface: rgb(10 10 10);
   --color-surface-1: rgb(23 23 23);
