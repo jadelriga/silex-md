@@ -8,6 +8,72 @@ export interface SearchHit {
   snippet: string;
 }
 
+export type Priority = "low" | "medium" | "high";
+export type ReminderRange = "overdue" | "today" | "this-week" | "none";
+
+export interface SearchFilters {
+  board?: string;
+  kind?: "task" | "note";
+  priorities?: Priority[]; // OR — entry's priority matches any of these
+  tags?: string[]; // AND — entry has all of these tags
+  reminderRange?: ReminderRange;
+}
+
+export function hasActiveFilters(f: SearchFilters | undefined): boolean {
+  if (!f) return false;
+  return Boolean(
+    f.board ||
+      f.kind ||
+      (f.priorities && f.priorities.length > 0) ||
+      (f.tags && f.tags.length > 0) ||
+      f.reminderRange,
+  );
+}
+
+function matchesReminderRange(
+  reminder: string | undefined,
+  range: ReminderRange,
+  now: number = Date.now(),
+): boolean {
+  if (range === "none") return !reminder;
+  if (!reminder) return false;
+  const t = new Date(reminder).getTime();
+  if (Number.isNaN(t)) return false;
+  if (range === "overdue") return t < now;
+  const dayStart = new Date(now);
+  dayStart.setHours(0, 0, 0, 0);
+  const dayEnd = new Date(dayStart);
+  dayEnd.setDate(dayEnd.getDate() + 1);
+  if (range === "today") {
+    return t >= dayStart.getTime() && t < dayEnd.getTime();
+  }
+  if (range === "this-week") {
+    const weekEnd = new Date(dayStart);
+    weekEnd.setDate(weekEnd.getDate() + 7);
+    return t >= now && t < weekEnd.getTime();
+  }
+  return false;
+}
+
+export function matchesFilters(entry: VaultEntry, f: SearchFilters): boolean {
+  if (f.board && entry.board !== f.board) return false;
+  if (f.kind && entry.kind !== f.kind) return false;
+  const fm = (entry.frontmatter ?? {}) as Record<string, unknown>;
+  if (f.priorities && f.priorities.length > 0) {
+    const p = fm.priority as string | undefined;
+    if (!p || !f.priorities.includes(p as Priority)) return false;
+  }
+  if (f.tags && f.tags.length > 0) {
+    const entryTags = (fm.tags as string[] | undefined) ?? [];
+    if (!f.tags.every((t) => entryTags.includes(t))) return false;
+  }
+  if (f.reminderRange) {
+    const reminder = fm.reminder as string | undefined;
+    if (!matchesReminderRange(reminder, f.reminderRange)) return false;
+  }
+  return true;
+}
+
 export function frontmatterText(fm: Record<string, unknown> | null): string {
   if (!fm) return "";
   const parts: string[] = [];
@@ -91,23 +157,29 @@ export function searchEntries(
   entries: VaultEntry[],
   bodies: Map<string, string>,
   query: string,
+  filters: SearchFilters = {},
   limit = 50,
 ): SearchHit[] {
   const q = query.trim();
-  if (!q) return [];
-  const tokens = q.toLowerCase().split(/\s+/).filter(Boolean);
-  if (tokens.length === 0) return [];
+  const filtersActive = hasActiveFilters(filters);
+  if (!q && !filtersActive) return [];
+
+  const tokens = q ? q.toLowerCase().split(/\s+/).filter(Boolean) : [];
 
   const hits: SearchHit[] = [];
   for (const entry of entries) {
+    if (!matchesFilters(entry, filters)) continue;
+
     const fm = (entry.frontmatter ?? {}) as Record<string, unknown>;
     const fileName = entry.path.split("/").pop()?.replace(/\.md$/, "") ?? "";
     const title = (fm.title as string) ?? fileName;
     const fmText = frontmatterText(fm);
     const body = bodies.get(entry.path) ?? "";
 
-    const haystack = `${title}\n${fmText}\n${body}`.toLowerCase();
-    if (!tokens.every((t) => haystack.includes(t))) continue;
+    if (tokens.length > 0) {
+      const haystack = `${title}\n${fmText}\n${body}`.toLowerCase();
+      if (!tokens.every((t) => haystack.includes(t))) continue;
+    }
 
     const hint =
       entry.kind === "task"

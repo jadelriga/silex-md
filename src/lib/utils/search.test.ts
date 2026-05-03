@@ -2,7 +2,9 @@ import { describe, it, expect } from "vitest";
 import {
   buildSnippet,
   frontmatterText,
+  hasActiveFilters,
   highlightMatches,
+  matchesFilters,
   queryTokens,
   searchEntries,
 } from "./search";
@@ -103,7 +105,7 @@ describe("searchEntries", () => {
 
   it("respects the limit argument", () => {
     const many = Array.from({ length: 100 }, (_, i) => task(`/v/x${i}.md`, `same word ${i}`));
-    expect(searchEntries(many, new Map(), "same", 10)).toHaveLength(10);
+    expect(searchEntries(many, new Map(), "same", {}, 10)).toHaveLength(10);
   });
 });
 
@@ -155,5 +157,79 @@ describe("highlightMatches", () => {
     expect(highlightMatches("foo bar", ["", " ", "foo"])).toBe(
       `<mark class="search-hit">foo</mark> bar`,
     );
+  });
+});
+
+describe("hasActiveFilters", () => {
+  it("returns false for undefined / empty / no-array filters", () => {
+    expect(hasActiveFilters(undefined)).toBe(false);
+    expect(hasActiveFilters({})).toBe(false);
+    expect(hasActiveFilters({ priorities: [], tags: [] })).toBe(false);
+  });
+  it("returns true when any filter is set", () => {
+    expect(hasActiveFilters({ board: "x" })).toBe(true);
+    expect(hasActiveFilters({ kind: "task" })).toBe(true);
+    expect(hasActiveFilters({ priorities: ["high"] })).toBe(true);
+    expect(hasActiveFilters({ tags: ["urgent"] })).toBe(true);
+    expect(hasActiveFilters({ reminderRange: "today" })).toBe(true);
+  });
+});
+
+describe("matchesFilters", () => {
+  const t = task("/v/boards/b/c/foo.md", "Foo", {
+    priority: "high",
+    tags: ["urgent", "frontend"],
+  });
+  it("passes when no filter is set", () => {
+    expect(matchesFilters(t, {})).toBe(true);
+  });
+  it("filters by board", () => {
+    expect(matchesFilters(t, { board: "b" })).toBe(true);
+    expect(matchesFilters(t, { board: "other" })).toBe(false);
+  });
+  it("filters by kind", () => {
+    expect(matchesFilters(t, { kind: "task" })).toBe(true);
+    expect(matchesFilters(t, { kind: "note" })).toBe(false);
+  });
+  it("filters by priority — entry priority must be one of the chosen", () => {
+    expect(matchesFilters(t, { priorities: ["high"] })).toBe(true);
+    expect(matchesFilters(t, { priorities: ["low", "high"] })).toBe(true);
+    expect(matchesFilters(t, { priorities: ["low"] })).toBe(false);
+  });
+  it("filters by tags — entry must have all the listed tags", () => {
+    expect(matchesFilters(t, { tags: ["urgent"] })).toBe(true);
+    expect(matchesFilters(t, { tags: ["urgent", "frontend"] })).toBe(true);
+    expect(matchesFilters(t, { tags: ["urgent", "missing"] })).toBe(false);
+  });
+  it("filters by reminderRange=none", () => {
+    const without = task("/v/boards/b/c/x.md", "X");
+    const withRem = task("/v/boards/b/c/y.md", "Y", { reminder: "2030-01-01T00:00:00Z" });
+    expect(matchesFilters(without, { reminderRange: "none" })).toBe(true);
+    expect(matchesFilters(withRem, { reminderRange: "none" })).toBe(false);
+  });
+});
+
+describe("searchEntries with filters", () => {
+  const a = task("/v/boards/alpha/done/a.md", "A", { priority: "high", tags: ["x"] });
+  const b = task("/v/boards/beta/done/b.md", "B", { priority: "low", tags: ["y"] });
+  const c = task("/v/boards/alpha/done/c.md", "C", { priority: "high", tags: ["x", "y"] });
+  // Override board on b so the test data is realistic
+  b.board = "beta";
+  c.board = "alpha";
+  a.board = "alpha";
+
+  it("returns all filter-passing entries when query is empty but filters are active", () => {
+    const hits = searchEntries([a, b, c], new Map(), "", { board: "alpha" });
+    expect(hits.map((h) => h.path)).toEqual([a.path, c.path]);
+  });
+  it("returns [] when both query and filters are empty", () => {
+    expect(searchEntries([a, b, c], new Map(), "", {})).toEqual([]);
+  });
+  it("intersects filters with query tokens", () => {
+    const hits = searchEntries([a, b, c], new Map(), "high", {
+      priorities: ["high"],
+    });
+    // matches both a and c (priority=high) AND haystack contains "high"
+    expect(hits.map((h) => h.path).sort()).toEqual([a.path, c.path].sort());
   });
 });
