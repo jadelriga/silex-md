@@ -32,8 +32,18 @@
     events: [] as ReturnType<typeof toEcEvents>,
     eventClick: (info: { event: { id: string } }) => onEventClick?.(info.event.id),
     dateClick: (info: { date: Date; dateStr: string }) =>
-      onDateClick?.(info.dateStr || isoDate(info.date)),
+      // EC's dateStr is YYYY-MM-DDTHH:MM:SS (19 chars) — slice to YYYY-MM-DD
+      // so <input type="date"> accepts it. Fall back to local-time formatting
+      // if dateStr is missing for any reason.
+      onDateClick?.(info.dateStr ? info.dateStr.slice(0, 10) : isoDate(info.date)),
     height: "100%",
+    // Enables EC's `.ec-uniform` class on .ec-main, which switches the row
+    // template from `auto` (content height) to `minmax(0, 1fr)` and adds
+    // `flex-grow: 1` so the grid fills the container. Without this, EC
+    // collapses to ~5 rows of natural height regardless of the flex chain
+    // above it. Side-effect: events that overflow a cell get a "+N more"
+    // link instead of stretching the row, which is the right trade-off.
+    dayMaxEvents: true,
     locale: "en-US",
     firstDay: 1,
   });
@@ -99,5 +109,11 @@
   }
   .silex-cal :global(.ec-button:hover) {
     background-color: var(--color-surface-2);
+  }
+  /* Days and events are both clickable (day → new-reminder modal,
+     event → task detail). Show that with a pointer cursor. */
+  .silex-cal :global(.ec-day),
+  .silex-cal :global(.ec-event) {
+    cursor: pointer;
   }
 </style>
