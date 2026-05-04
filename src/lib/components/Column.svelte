@@ -2,6 +2,7 @@
   import { tick } from "svelte";
   import { dndzone } from "svelte-dnd-action";
   import type { VaultEntry } from "$lib/api/vault";
+  import { ui } from "$lib/stores/ui.svelte";
   import { withContextMenu } from "$lib/utils/contextMenu";
   import Card from "./Card.svelte";
   import RenameInput from "./RenameInput.svelte";
@@ -41,10 +42,14 @@
   } = $props();
 
   let renaming = $state(false);
-  let adding = $state(false);
   let taskTitle = $state("");
   let inputEl = $state<HTMLInputElement | undefined>();
   let submitting = $state(false);
+
+  // Driven by the ui store so the keyboard shortcut (Cmd+N) and the
+  // "Add a card" button are the same gesture, and only one column can
+  // be in adding-mode at a time.
+  const adding = $derived(ui.addingCardInColumn === name);
 
   $effect(() => {
     if (adding) tick().then(() => inputEl?.focus());
@@ -62,7 +67,7 @@
     try {
       await onAddTask(trimmed);
       taskTitle = "";
-      adding = false;
+      ui.addingCardInColumn = null;
     } catch (e) {
       console.error("Failed to add task", e);
     } finally {
@@ -71,8 +76,12 @@
   }
 
   function cancelAdding() {
-    adding = false;
+    ui.addingCardInColumn = null;
     taskTitle = "";
+  }
+
+  function startAdding() {
+    ui.addingCardInColumn = name;
   }
 
   function onTaskKey(e: KeyboardEvent) {
@@ -168,7 +177,7 @@
       {:else}
         <button
           type="button"
-          onclick={() => (adding = true)}
+          onclick={startAdding}
           class="w-full px-2 py-1.5 rounded text-sm text-fg-subtle hover:bg-surface-2/60 hover:text-fg text-left flex items-center gap-1.5"
         >
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-3.5 h-3.5">

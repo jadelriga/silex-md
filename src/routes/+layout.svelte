@@ -97,6 +97,15 @@
           console.error("reveal-settings failed", e);
         }
       },
+      "new-task": () => {
+        // No active board → no-op (user is on calendar/notes/home/etc.).
+        // Otherwise focus the leftmost column's "Add a card" input via
+        // the shared ui.addingCardInColumn state.
+        if (!activeBoard) return;
+        const layout = boards.list.find((b) => b.name === activeBoard);
+        const leftmost = layout?.columns[0];
+        if (leftmost) ui.addingCardInColumn = leftmost;
+      },
       "new-note": () => {
         ui.creating = "note";
       },

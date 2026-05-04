@@ -3,6 +3,7 @@ import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 export type MenuActionId =
   | "preferences"
   | "reveal-settings"
+  | "new-task"
   | "new-note"
   | "new-board"
   | "new-folder"

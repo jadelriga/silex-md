@@ -28,8 +28,11 @@ pub fn build_menu(app: &AppHandle) -> tauri::Result<Menu<Wry>> {
         .quit()
         .build()?;
 
-    let new_note = MenuItemBuilder::with_id("new-note", "New Note")
+    let new_task = MenuItemBuilder::with_id("new-task", "New Task")
         .accelerator("CmdOrCtrl+Shift+N")
+        .build(app)?;
+    let new_note = MenuItemBuilder::with_id("new-note", "New Note")
+        .accelerator("CmdOrCtrl+N")
         .build(app)?;
     let new_board = MenuItemBuilder::with_id("new-board", "New Board")
         .accelerator("CmdOrCtrl+Shift+B")
@@ -41,6 +44,7 @@ pub fn build_menu(app: &AppHandle) -> tauri::Result<Menu<Wry>> {
         MenuItemBuilder::with_id("reveal-settings", "Reveal Settings File").build(app)?;
 
     let file_menu = SubmenuBuilder::new(app, "File")
+        .item(&new_task)
         .item(&new_note)
         .item(&new_board)
         .item(&new_folder)

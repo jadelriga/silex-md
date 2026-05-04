@@ -20,6 +20,7 @@ class UiStore {
   searchOpen = $state(false);
   settingsOpen = $state(false);
   creating = $state<CreatingKind>(null);
+  addingCardInColumn = $state<string | null>(null);
   notesDrag = $state<NotesDrag | null>(null);
   notesDragOver = $state<string | null>(null);
   newReminder = $state<NewReminderState | null>(null);
