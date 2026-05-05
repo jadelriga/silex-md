@@ -27,6 +27,7 @@
   import ContextMenu from "$lib/components/ContextMenu.svelte";
   import ConfirmDialog from "$lib/components/ConfirmDialog.svelte";
   import SettingsModal from "$lib/components/SettingsModal.svelte";
+  import Toast from "$lib/components/Toast.svelte";
   import { revealItemInDir } from "@tauri-apps/plugin-opener";
   import { appDataDir, join } from "@tauri-apps/api/path";
   import { withContextMenu } from "$lib/utils/contextMenu";
@@ -41,10 +42,44 @@
   let notesExpanded = $state(new Set<string>());
   let renamingBoard = $state<string | null>(null);
   let terminalEverOpened = $state(false);
+  let taskPanelMaximized = $state(false);
 
   $effect(() => {
     if (ui.terminalOpen) terminalEverOpened = true;
   });
+
+  // Reset maximize on each new task open so every panel session starts at
+  // the persisted width.
+  $effect(() => {
+    void ui.openTaskPath;
+    untrack(() => (taskPanelMaximized = false));
+  });
+
+  function startTaskPanelResize(e: MouseEvent) {
+    e.preventDefault();
+    const startX = e.clientX;
+    const startWidth = settings.taskPanelWidth;
+    let lastWidth = startWidth;
+    const onMove = (ev: MouseEvent) => {
+      const delta = startX - ev.clientX;
+      lastWidth = Math.max(
+        320,
+        Math.min(window.innerWidth - 240, startWidth + delta),
+      );
+      settings.taskPanelWidth = lastWidth;
+    };
+    const onUp = () => {
+      window.removeEventListener("mousemove", onMove);
+      window.removeEventListener("mouseup", onUp);
+      document.body.style.userSelect = "";
+      document.body.style.cursor = "";
+      void settings.setTaskPanelWidth(lastWidth);
+    };
+    document.body.style.userSelect = "none";
+    document.body.style.cursor = "ew-resize";
+    window.addEventListener("mousemove", onMove);
+    window.addEventListener("mouseup", onUp);
+  }
 
   function startTerminalResize(e: MouseEvent) {
     e.preventDefault();
@@ -563,14 +598,33 @@
 <ContextMenu />
 <ConfirmDialog />
 <SettingsModal />
+<Toast />
 
 {#if ui.openTaskPath}
   <div
-    class="fixed right-0 top-0 bottom-0 z-40"
+    class="fixed right-0 top-8 bottom-0 z-40 flex {taskPanelMaximized ? 'left-60' : ''}"
+    style={taskPanelMaximized ? "" : `width: ${settings.taskPanelWidth}px`}
     transition:fly={{ x: 640, duration: 220, easing: quintOut }}
   >
-    {#key ui.openTaskPath}
-      <TaskDetailPanel path={ui.openTaskPath} />
-    {/key}
+    {#if !taskPanelMaximized}
+      <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
+      <!-- svelte-ignore a11y_click_events_have_key_events -->
+      <div
+        role="separator"
+        aria-orientation="vertical"
+        onmousedown={startTaskPanelResize}
+        onclick={(e) => e.stopPropagation()}
+        class="w-1 -mr-0.5 cursor-ew-resize hover:bg-surface-3 shrink-0 z-10"
+      ></div>
+    {/if}
+    <div class="flex-1 min-w-0">
+      {#key ui.openTaskPath}
+        <TaskDetailPanel
+          path={ui.openTaskPath}
+          maximized={taskPanelMaximized}
+          onMaximizeToggle={() => (taskPanelMaximized = !taskPanelMaximized)}
+        />
+      {/key}
+    </div>
   </div>
 {/if}

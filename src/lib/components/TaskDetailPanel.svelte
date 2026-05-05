@@ -6,11 +6,43 @@
   import { syncEvents } from "$lib/stores/syncEvents.svelte";
   import { buildTaskContent } from "$lib/utils/yaml";
   import { clickOutside } from "$lib/utils/clickOutside";
+  import { toast } from "$lib/stores/toast.svelte";
   import { formatReminder } from "$lib/utils/reminder";
   import CodeMirrorEditor from "./CodeMirrorEditor.svelte";
   import ReminderPopover from "./ReminderPopover.svelte";
 
-  let { path }: { path: string } = $props();
+  let {
+    path,
+    maximized = false,
+    onMaximizeToggle,
+  }: {
+    path: string;
+    maximized?: boolean;
+    onMaximizeToggle?: () => void;
+  } = $props();
+
+  async function copyPath(e: MouseEvent) {
+    // Stop propagation so the panel's clickOutside doesn't fire — the SVG
+    // swap from a re-render would otherwise detach the click target before
+    // the document handler reads it.
+    e.stopPropagation();
+    try {
+      await navigator.clipboard.writeText(path);
+      toast.show("Path copied to clipboard");
+    } catch (err) {
+      console.error("copyPath failed", err);
+    }
+  }
+
+  function onMaximizeClick(e: MouseEvent) {
+    e.stopPropagation();
+    onMaximizeToggle?.();
+  }
+
+  function onCloseClick(e: MouseEvent) {
+    e.stopPropagation();
+    void close();
+  }
 
   const entry = $derived(tasks.entries.get(path) ?? null);
 
@@ -142,15 +174,65 @@
 
 <aside
   use:clickOutside={{ callback: close, ignore: "[data-card]" }}
-  class="h-full w-[40rem] max-w-full bg-surface-1 border-l border-border flex flex-col shadow-2xl"
+  class="h-full w-full bg-surface-1 border-l border-border flex flex-col shadow-2xl"
 >
   <header
-    class="flex items-center justify-between px-4 py-2 border-b border-border text-xs text-fg-subtle"
+    class="flex items-center justify-between gap-2 px-4 py-2 border-b border-border text-xs text-fg-subtle"
   >
-    <span class="truncate" title={path}>{path}</span>
-    <button onclick={close} class="text-fg-muted hover:text-fg" aria-label="Close">
-      close
-    </button>
+    <span class="truncate flex-1 min-w-0" title={path}>{path}</span>
+    <div class="flex items-center gap-1 shrink-0">
+      <button
+        type="button"
+        onclick={copyPath}
+        title="Copy path"
+        aria-label="Copy path"
+        class="p-1 rounded text-fg-muted hover:text-fg hover:bg-surface-2"
+      >
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+          stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4">
+          <rect x="9" y="9" width="13" height="13" rx="2" />
+          <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+        </svg>
+      </button>
+      <button
+        type="button"
+        onclick={onMaximizeClick}
+        title={maximized ? "Restore" : "Maximize"}
+        aria-label={maximized ? "Restore" : "Maximize"}
+        class="p-1 rounded text-fg-muted hover:text-fg hover:bg-surface-2"
+      >
+        {#if maximized}
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+            stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4">
+            <polyline points="4 14 10 14 10 20" />
+            <polyline points="20 10 14 10 14 4" />
+            <line x1="14" y1="10" x2="21" y2="3" />
+            <line x1="3" y1="21" x2="10" y2="14" />
+          </svg>
+        {:else}
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+            stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4">
+            <polyline points="15 3 21 3 21 9" />
+            <polyline points="9 21 3 21 3 15" />
+            <line x1="21" y1="3" x2="14" y2="10" />
+            <line x1="3" y1="21" x2="10" y2="14" />
+          </svg>
+        {/if}
+      </button>
+      <button
+        type="button"
+        onclick={onCloseClick}
+        title="Close"
+        aria-label="Close"
+        class="p-1 rounded text-fg-muted hover:text-fg hover:bg-surface-2"
+      >
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+          stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4">
+          <line x1="18" y1="6" x2="6" y2="18" />
+          <line x1="6" y1="6" x2="18" y2="18" />
+        </svg>
+      </button>
+    </div>
   </header>
 
   {#if !entry}

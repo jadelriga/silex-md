@@ -5,6 +5,7 @@
   import { vaultApi } from "$lib/api/vault";
   import { syncEvents } from "$lib/stores/syncEvents.svelte";
   import { buildTaskContent } from "$lib/utils/yaml";
+  import { toast } from "$lib/stores/toast.svelte";
   import CodeMirrorEditor from "./CodeMirrorEditor.svelte";
 
   let { path }: { path: string } = $props();
@@ -25,6 +26,15 @@
   let lastLoadedPath = $state<string | null>(null);
 
   let saveTimer: ReturnType<typeof setTimeout> | null = null;
+
+  async function copyPath() {
+    try {
+      await navigator.clipboard.writeText(path);
+      toast.show("Path copied to clipboard");
+    } catch (e) {
+      console.error("copyPath failed", e);
+    }
+  }
 
   const fileName = $derived(path.split("/").pop()?.replace(/\.md$/, "") ?? "");
 
@@ -131,7 +141,7 @@
       </div>
     {/if}
 
-    <div class="flex items-center justify-between px-6 pt-6 pb-2">
+    <div class="flex items-center gap-2 px-6 pt-6 pb-2">
       <input
         bind:value={titleDraft}
         oninput={onTitleChange}
@@ -142,6 +152,19 @@
         class="flex-1 bg-transparent text-2xl font-light text-fg outline-none placeholder:text-fg-faint"
         placeholder={fileName}
       />
+      <button
+        type="button"
+        onclick={copyPath}
+        title="Copy path"
+        aria-label="Copy path"
+        class="p-1.5 rounded text-fg-muted hover:text-fg hover:bg-surface-2 shrink-0"
+      >
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+          stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4">
+          <rect x="9" y="9" width="13" height="13" rx="2" />
+          <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+        </svg>
+      </button>
     </div>
 
     {#if saveError}
