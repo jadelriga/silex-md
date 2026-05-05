@@ -1,6 +1,6 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "silex",
+  "productName": "Silex",
   "version": "0.1.0",
   "identifier": "com.silex.app",
   "build": {
@@ -12,7 +12,7 @@
   "app": {
     "windows": [
       {
-        "title": "silex",
+        "title": "Silex",
         "width": 800,
         "height": 600,
         "titleBarStyle": "Overlay",

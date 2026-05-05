@@ -24,24 +24,24 @@
     {/if}
 
     <div class="mt-8 flex flex-wrap justify-center gap-x-6 gap-y-2 text-xs text-fg-faint">
-      <span>
-        <kbd
-          class="px-1.5 py-0.5 rounded border border-border-strong bg-surface-1 font-mono"
-        >⌘ P</kbd>
-        command palette
-      </span>
-      <span>
-        <kbd
-          class="px-1.5 py-0.5 rounded border border-border-strong bg-surface-1 font-mono"
-        >⌘ ⇧ F</kbd>
-        search
-      </span>
-      <span>
-        <kbd
-          class="px-1.5 py-0.5 rounded border border-border-strong bg-surface-1 font-mono"
-        >⌘ J</kbd>
-        terminal
-      </span>
+      {#each [
+        { keys: "⌘ P", label: "quick switcher" },
+        { keys: "⌘ ⇧ P", label: "run command" },
+        { keys: "⌘ ⇧ F", label: "search" },
+        { keys: "⌘ J", label: "terminal" },
+        { keys: "⌘ N", label: "new note" },
+        { keys: "⌘ ⇧ N", label: "new task" },
+        { keys: "⌘ ⇧ B", label: "new board" },
+        { keys: "⌘ ,", label: "preferences" },
+      ] as shortcut (shortcut.keys)}
+        <span>
+          <kbd
+            class="px-1.5 py-0.5 rounded border border-border-strong bg-surface-1 font-mono"
+            >{shortcut.keys}</kbd
+          >
+          {shortcut.label}
+        </span>
+      {/each}
     </div>
   </div>
 </div>

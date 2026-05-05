@@ -318,14 +318,18 @@
       class="flex-1 px-3 text-xs text-fg-subtle truncate"
       data-tauri-drag-region
     >
-      silex{vault.path ? ` — ${basename(vault.path)}` : ""}
+      Silex{vault.path ? ` — ${basename(vault.path)}` : ""}
     </div>
   </div>
 
   <div class="flex flex-1 min-h-0">
     <aside class="w-60 shrink-0 border-r border-border bg-surface-1 flex flex-col">
       <div class="px-4 py-3 border-b border-border">
-        <h1 class="text-sm font-semibold tracking-wide">Silex</h1>
+        <a
+          href="/"
+          class="block text-sm font-semibold tracking-wide text-fg hover:text-fg-muted"
+          title="Home"
+        >Silex</a>
         {#if vault.path}
           <p class="mt-0.5 text-xs text-fg-subtle truncate" title={vault.path}>
             {basename(vault.path)}

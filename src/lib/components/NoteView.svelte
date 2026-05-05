@@ -142,15 +142,6 @@
         class="flex-1 bg-transparent text-2xl font-light text-fg outline-none placeholder:text-fg-faint"
         placeholder={fileName}
       />
-      <div class="flex items-center gap-3 text-xs text-fg-subtle">
-        {#if saving}
-          <span>saving…</span>
-        {:else if dirty}
-          <span class="text-fg-muted">unsaved</span>
-        {:else if bodyLoaded}
-          <span>saved</span>
-        {/if}
-      </div>
     </div>
 
     {#if saveError}

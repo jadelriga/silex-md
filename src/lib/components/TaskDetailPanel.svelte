@@ -281,13 +281,6 @@
       />
 
       <div class="text-xs text-fg-subtle flex items-center gap-3">
-        {#if saving}
-          <span>saving…</span>
-        {:else if dirty}
-          <span class="text-fg-muted">unsaved changes</span>
-        {:else if bodyLoaded}
-          <span>saved</span>
-        {/if}
         {#if entry.subtaskTotal > 0}
           <span>{entry.subtaskDone}/{entry.subtaskTotal} subtasks</span>
         {/if}
