@@ -44,6 +44,24 @@ class BodiesStore {
     this.isLoading = false;
     this.error = null;
   }
+
+  /** Same as notes.renameFolderPath — repaint cache keys for a directory rename. */
+  renameFolderPath(oldAbs: string, newAbs: string) {
+    if (!this.isLoaded) return;
+    const oldPrefix = oldAbs.endsWith("/") ? oldAbs : oldAbs + "/";
+    const newPrefix = newAbs.endsWith("/") ? newAbs : newAbs + "/";
+    const moves: Array<[string, string]> = [];
+    for (const path of this.cache.keys()) {
+      if (path.startsWith(oldPrefix)) {
+        moves.push([path, newPrefix + path.slice(oldPrefix.length)]);
+      }
+    }
+    for (const [oldPath, newPath] of moves) {
+      const body = this.cache.get(oldPath);
+      this.cache.delete(oldPath);
+      if (body !== undefined) this.cache.set(newPath, body);
+    }
+  }
 }
 
 export const bodies = new BodiesStore();

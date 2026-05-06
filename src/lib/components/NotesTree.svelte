@@ -5,6 +5,7 @@
   import { ui } from "$lib/stores/ui.svelte";
   import { vault } from "$lib/stores/vault.svelte";
   import { notes } from "$lib/stores/notes.svelte";
+  import { bodies } from "$lib/stores/bodies.svelte";
   import { vaultApi } from "$lib/api/vault";
   import { ask } from "@tauri-apps/plugin-dialog";
   import { confirm } from "$lib/stores/confirm.svelte";
@@ -132,8 +133,26 @@
     }
     await vaultApi.movePath(oldAbs, newAbs);
     renamingPath = null;
+
+    // FSEvents on macOS doesn't fire per-file events for a directory
+    // rename, and our watcher filters to .md paths anyway, so repaint
+    // the entries map + body cache + expanded set ourselves to keep the
+    // tree in sync with disk.
+    notes.renameFolderPath(oldAbs, newAbs);
+    bodies.renameFolderPath(oldAbs, newAbs);
+    const oldRelPrefix = `${oldRel}/`;
+    const newRelPrefix = `${newRel}/`;
+    const remappedExpanded = new Set<string>();
+    for (const p of expanded) {
+      if (p === oldRel) remappedExpanded.add(newRel);
+      else if (p.startsWith(oldRelPrefix))
+        remappedExpanded.add(newRelPrefix + p.slice(oldRelPrefix.length));
+      else remappedExpanded.add(p);
+    }
+    expanded = remappedExpanded;
+
     await notes.refreshFolders();
-    if (activeRelativePath && activeRelativePath.startsWith(`${oldRel}/`)) {
+    if (activeRelativePath && activeRelativePath.startsWith(oldRelPrefix)) {
       const movedActiveRel = newRel + activeRelativePath.slice(oldRel.length);
       goto(noteHref(movedActiveRel));
     }

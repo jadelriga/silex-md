@@ -68,6 +68,29 @@ class NotesStore {
   remove(path: string) {
     this.entries.delete(path);
   }
+
+  /**
+   * Rewrite every cached entry whose path lives under `oldAbs/` to live
+   * under `newAbs/`. The watcher doesn't fire per-file events for a
+   * directory rename on macOS (FSEvents reports at the directory level
+   * and we filter to `.md` paths), so the caller — typically the rename
+   * UI itself — has to repaint our local state in lockstep with the
+   * filesystem rename.
+   */
+  renameFolderPath(oldAbs: string, newAbs: string) {
+    const oldPrefix = oldAbs.endsWith("/") ? oldAbs : oldAbs + "/";
+    const newPrefix = newAbs.endsWith("/") ? newAbs : newAbs + "/";
+    const updates: VaultEntry[] = [];
+    const removes: string[] = [];
+    for (const [path, entry] of this.entries) {
+      if (path.startsWith(oldPrefix)) {
+        removes.push(path);
+        updates.push({ ...entry, path: newPrefix + path.slice(oldPrefix.length) });
+      }
+    }
+    for (const p of removes) this.entries.delete(p);
+    for (const e of updates) this.entries.set(e.path, e);
+  }
 }
 
 export const notes = new NotesStore();
