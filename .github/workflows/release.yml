@@ -1,0 +1,79 @@
+name: Release
+
+# Tag-driven releases. Push a tag matching v* (e.g. v0.1.0) to kick off a
+# matrix that builds Silex for macOS (arm64 + x86_64), Linux (x86_64), and
+# Windows (x86_64), and uploads the artifacts to a draft GitHub Release.
+# Manual review + publish from the GitHub UI; nothing is auto-published.
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build:
+    name: build (${{ matrix.platform.runner }} / ${{ matrix.platform.target || 'default' }})
+    runs-on: ${{ matrix.platform.runner }}
+    timeout-minutes: 60
+    strategy:
+      # One failing target shouldn't block the others — a failed Linux build
+      # still produces useful mac + Windows artifacts.
+      fail-fast: false
+      matrix:
+        platform:
+          - { runner: macos-latest,   target: aarch64-apple-darwin }
+          - { runner: macos-latest,   target: x86_64-apple-darwin  }
+          - { runner: ubuntu-22.04,   target: '' }
+          - { runner: windows-latest, target: '' }
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Setup Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          # `targets` is empty on Linux/Windows (default toolchain target is
+          # already correct); on macOS we add the arm64 / x86_64 cross target.
+          targets: ${{ matrix.platform.target }}
+
+      - name: Cache cargo build
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri -> target
+          key: ${{ matrix.platform.runner }}-${{ matrix.platform.target }}
+
+      - name: Install Linux build deps
+        if: matrix.platform.runner == 'ubuntu-22.04'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            libwebkit2gtk-4.1-dev \
+            libgtk-3-dev \
+            libayatana-appindicator3-dev \
+            librsvg2-dev \
+            libxdo-dev
+
+      - name: Install npm packages
+        run: npm ci
+
+      # tauri-action runs `tauri build` with the right per-platform bundler
+      # invocation (DMG + .app on macOS, MSI + NSIS on Windows, DEB + AppImage
+      # on Linux), and uploads the resulting artifacts to a draft Release
+      # named after the tag. The release stays in DRAFT until manually
+      # published from the GitHub UI.
+      - name: Build & upload to draft release
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tagName: ${{ github.ref_name }}
+          releaseName: 'Silex ${{ github.ref_name }}'
+          releaseDraft: true
+          prerelease: false
+          args: ${{ matrix.platform.target && format('--target {0}', matrix.platform.target) || '' }}
