@@ -36,6 +36,34 @@ pub struct BoardMeta {
     pub columns: Vec<String>,
 }
 
+/// Returns true if `name` is unsafe to use as a single path segment on any
+/// of our target OSes (macOS, Linux, Windows). Specifically rejects empty
+/// strings, anything containing `/` or `\` or `..`, names that end in `.`
+/// or space (Windows silently strips those, corrupting the resulting path),
+/// and the Windows reserved device names (`CON`, `PRN`, `AUX`, `NUL`,
+/// `COM1`–`COM9`, `LPT1`–`LPT9`).
+fn is_invalid_segment(name: &str) -> bool {
+    if name.is_empty() {
+        return true;
+    }
+    if name.contains('/') || name.contains('\\') || name.contains("..") {
+        return true;
+    }
+    if name.ends_with(' ') || name.ends_with('.') {
+        return true;
+    }
+    let upper = name.to_ascii_uppercase();
+    let stem = upper.split('.').next().unwrap_or(&upper);
+    matches!(
+        stem,
+        "CON" | "PRN" | "AUX" | "NUL"
+        | "COM1" | "COM2" | "COM3" | "COM4" | "COM5"
+        | "COM6" | "COM7" | "COM8" | "COM9"
+        | "LPT1" | "LPT2" | "LPT3" | "LPT4" | "LPT5"
+        | "LPT6" | "LPT7" | "LPT8" | "LPT9"
+    )
+}
+
 fn read_board_meta(board_dir: &Path) -> BoardMeta {
     let meta_path = board_dir.join("_silex.json");
     if !meta_path.is_file() {
@@ -200,7 +228,7 @@ pub async fn set_board_column_order(
     board_name: String,
     columns: Vec<String>,
 ) -> Result<(), String> {
-    if board_name.contains('/') || board_name.contains("..") {
+    if is_invalid_segment(&board_name) {
         return Err("Invalid board name".to_string());
     }
     let board_dir = PathBuf::from(&vault_path).join("boards").join(&board_name);
@@ -251,10 +279,10 @@ fn do_create_task(
     }
     let trimmed_board = board.trim();
     let trimmed_column = column.trim();
-    if trimmed_board.is_empty() || trimmed_board.contains('/') || trimmed_board.contains("..") {
+    if is_invalid_segment(trimmed_board) {
         return Err("Invalid board name".to_string());
     }
-    if trimmed_column.is_empty() || trimmed_column.contains('/') || trimmed_column.contains("..") {
+    if is_invalid_segment(trimmed_column) {
         return Err("Invalid column name".to_string());
     }
 
@@ -357,13 +385,10 @@ pub async fn create_column(
 ) -> Result<(), String> {
     let trimmed_board = board_name.trim();
     let trimmed_col = column_name.trim();
-    if trimmed_col.is_empty() {
-        return Err("Column name cannot be empty".to_string());
+    if is_invalid_segment(trimmed_col) {
+        return Err("Invalid column name".to_string());
     }
-    if trimmed_col.contains('/') || trimmed_col.contains("..") {
-        return Err("Column name cannot contain '/' or '..'".to_string());
-    }
-    if trimmed_board.is_empty() || trimmed_board.contains('/') || trimmed_board.contains("..") {
+    if is_invalid_segment(trimmed_board) {
         return Err("Invalid board name".to_string());
     }
     let board_dir = PathBuf::from(&vault_path).join("boards").join(trimmed_board);
@@ -492,10 +517,10 @@ pub async fn delete_column(
     board_name: String,
     column_name: String,
 ) -> Result<(), String> {
-    if board_name.contains('/') || board_name.contains("..") || board_name.is_empty() {
+    if is_invalid_segment(&board_name) {
         return Err("Invalid board name".to_string());
     }
-    if column_name.contains('/') || column_name.contains("..") || column_name.is_empty() {
+    if is_invalid_segment(&column_name) {
         return Err("Invalid column name".to_string());
     }
     let board_dir = PathBuf::from(&vault_path).join("boards").join(&board_name);
@@ -522,18 +547,15 @@ pub async fn rename_column(
     column_name: String,
     new_name: String,
 ) -> Result<(), String> {
-    if board_name.contains('/') || board_name.contains("..") || board_name.is_empty() {
+    if is_invalid_segment(&board_name) {
         return Err("Invalid board name".to_string());
     }
-    if column_name.contains('/') || column_name.contains("..") || column_name.is_empty() {
+    if is_invalid_segment(&column_name) {
         return Err("Invalid column name".to_string());
     }
     let trimmed = new_name.trim();
-    if trimmed.is_empty() {
-        return Err("Column name cannot be empty".to_string());
-    }
-    if trimmed.contains('/') || trimmed.contains("..") {
-        return Err("Column name cannot contain '/' or '..'".to_string());
+    if is_invalid_segment(trimmed) {
+        return Err("Invalid column name".to_string());
     }
     if trimmed == column_name {
         return Ok(());
@@ -595,11 +617,8 @@ pub async fn create_note(vault_path: String, relative_path: String) -> Result<St
 
 fn do_create_board(vault: &Path, name: &str) -> Result<PathBuf, String> {
     let trimmed = name.trim();
-    if trimmed.is_empty() {
-        return Err("Board name cannot be empty".to_string());
-    }
-    if trimmed.contains('/') || trimmed.contains("..") {
-        return Err("Board name cannot contain '/' or '..'".to_string());
+    if is_invalid_segment(trimmed) {
+        return Err("Invalid board name".to_string());
     }
     let board_path = vault.join("boards").join(trimmed);
     if board_path.exists() {
@@ -669,6 +688,9 @@ fn validate_note_relative(relative_path: &str) -> Result<Vec<String>, String> {
     for seg in &segments {
         if seg == ".." || seg == "." {
             return Err("Path cannot contain '.' or '..' segments".to_string());
+        }
+        if is_invalid_segment(seg) {
+            return Err(format!("Invalid path segment: '{}'", seg));
         }
     }
     if segments.first().map(|s| s.as_str()) == Some("boards") {

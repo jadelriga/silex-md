@@ -1,32 +1,38 @@
-use tauri::menu::{
-    AboutMetadataBuilder, Menu, MenuBuilder, MenuItemBuilder, PredefinedMenuItem, SubmenuBuilder,
-};
+use tauri::menu::{Menu, MenuBuilder, MenuItemBuilder, SubmenuBuilder};
+#[cfg(target_os = "macos")]
+use tauri::menu::{AboutMetadataBuilder, PredefinedMenuItem};
 use tauri::{AppHandle, Emitter, Wry};
 
 pub fn build_menu(app: &AppHandle) -> tauri::Result<Menu<Wry>> {
     let preferences = MenuItemBuilder::with_id("preferences", "Preferences…")
-        .accelerator("Cmd+,")
+        .accelerator("CmdOrCtrl+,")
         .build(app)?;
 
-    let about_metadata = AboutMetadataBuilder::new().name(Some("Silex")).build();
-
-    let app_menu = SubmenuBuilder::new(app, "Silex")
-        .item(&PredefinedMenuItem::about(
-            app,
-            Some("About Silex"),
-            Some(about_metadata),
-        )?)
-        .separator()
-        .item(&preferences)
-        .separator()
-        .services()
-        .separator()
-        .hide()
-        .hide_others()
-        .show_all()
-        .separator()
-        .quit()
-        .build()?;
+    // The Silex app submenu (Hide, Quit, Services, etc.) is mac-only — those
+    // predefined items don't exist on Win/Linux, and the convention there is
+    // a normal File/Edit/Window bar with no app-named menu. On non-mac, we
+    // route Preferences into Edit instead (Win/Linux convention).
+    #[cfg(target_os = "macos")]
+    let app_menu = {
+        let about_metadata = AboutMetadataBuilder::new().name(Some("Silex")).build();
+        SubmenuBuilder::new(app, "Silex")
+            .item(&PredefinedMenuItem::about(
+                app,
+                Some("About Silex"),
+                Some(about_metadata),
+            )?)
+            .separator()
+            .item(&preferences)
+            .separator()
+            .services()
+            .separator()
+            .hide()
+            .hide_others()
+            .show_all()
+            .separator()
+            .quit()
+            .build()?
+    };
 
     let new_task = MenuItemBuilder::with_id("new-task", "New Task")
         .accelerator("CmdOrCtrl+Shift+N")
@@ -64,19 +70,28 @@ pub fn build_menu(app: &AppHandle) -> tauri::Result<Menu<Wry>> {
         .accelerator("CmdOrCtrl+Shift+P")
         .build(app)?;
 
-    let edit_menu = SubmenuBuilder::new(app, "Edit")
-        .undo()
-        .redo()
-        .separator()
-        .cut()
-        .copy()
-        .paste()
-        .select_all()
-        .separator()
-        .item(&find)
-        .item(&palette)
-        .item(&commands)
-        .build()?;
+    let edit_menu = {
+        #[allow(unused_mut)]
+        let mut b = SubmenuBuilder::new(app, "Edit")
+            .undo()
+            .redo()
+            .separator()
+            .cut()
+            .copy()
+            .paste()
+            .select_all()
+            .separator()
+            .item(&find)
+            .item(&palette)
+            .item(&commands);
+        // On Win/Linux Preferences lives at the bottom of Edit since there's
+        // no app-named menu. On macOS it stays in the Silex submenu (above).
+        #[cfg(not(target_os = "macos"))]
+        {
+            b = b.separator().item(&preferences);
+        }
+        b.build()?
+    };
 
     let toggle_terminal = MenuItemBuilder::with_id("toggle-terminal", "Toggle Terminal")
         .accelerator("CmdOrCtrl+J")
@@ -106,15 +121,24 @@ pub fn build_menu(app: &AppHandle) -> tauri::Result<Menu<Wry>> {
         .close_window()
         .build()?;
 
-    MenuBuilder::new(app)
-        .items(&[
-            &app_menu,
-            &file_menu,
-            &edit_menu,
-            &view_menu,
-            &window_menu,
-        ])
-        .build()
+    #[cfg(target_os = "macos")]
+    {
+        MenuBuilder::new(app)
+            .items(&[
+                &app_menu,
+                &file_menu,
+                &edit_menu,
+                &view_menu,
+                &window_menu,
+            ])
+            .build()
+    }
+    #[cfg(not(target_os = "macos"))]
+    {
+        MenuBuilder::new(app)
+            .items(&[&file_menu, &edit_menu, &view_menu, &window_menu])
+            .build()
+    }
 }
 
 pub fn handle_menu_event(app: &AppHandle, id: &str) {

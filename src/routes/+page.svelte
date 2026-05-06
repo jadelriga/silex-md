@@ -1,5 +1,17 @@
 <script lang="ts">
   import { vault } from "$lib/stores/vault.svelte";
+  import { fmtShortcut } from "$lib/utils/platform";
+
+  const shortcuts = [
+    { keys: fmtShortcut({ mod: true, key: "P" }), label: "quick switcher" },
+    { keys: fmtShortcut({ mod: true, shift: true, key: "P" }), label: "run command" },
+    { keys: fmtShortcut({ mod: true, shift: true, key: "F" }), label: "search" },
+    { keys: fmtShortcut({ mod: true, key: "J" }), label: "terminal" },
+    { keys: fmtShortcut({ mod: true, key: "N" }), label: "new note" },
+    { keys: fmtShortcut({ mod: true, shift: true, key: "N" }), label: "new task" },
+    { keys: fmtShortcut({ mod: true, shift: true, key: "B" }), label: "new board" },
+    { keys: fmtShortcut({ mod: true, key: "," }), label: "preferences" },
+  ];
 
   const ascii = ` ███████╗██╗██╗     ███████╗██╗  ██╗
  ██╔════╝██║██║     ██╔════╝╚██╗██╔╝
@@ -24,16 +36,7 @@
     {/if}
 
     <div class="mt-8 flex flex-wrap justify-center gap-x-6 gap-y-2 text-xs text-fg-faint">
-      {#each [
-        { keys: "⌘ P", label: "quick switcher" },
-        { keys: "⌘ ⇧ P", label: "run command" },
-        { keys: "⌘ ⇧ F", label: "search" },
-        { keys: "⌘ J", label: "terminal" },
-        { keys: "⌘ N", label: "new note" },
-        { keys: "⌘ ⇧ N", label: "new task" },
-        { keys: "⌘ ⇧ B", label: "new board" },
-        { keys: "⌘ ,", label: "preferences" },
-      ] as shortcut (shortcut.keys)}
+      {#each shortcuts as shortcut (shortcut.keys)}
         <span>
           <kbd
             class="px-1.5 py-0.5 rounded border border-border-strong bg-surface-1 font-mono"

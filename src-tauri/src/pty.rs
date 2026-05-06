@@ -27,6 +27,40 @@ impl PtyState {
 
 static SESSION_ID_COUNTER: AtomicU64 = AtomicU64::new(0);
 
+/// Per-OS default interactive shell. On Unix we honour `$SHELL` and fall back
+/// to `/bin/sh`; on Windows there's no `$SHELL`, so we prefer PowerShell 7
+/// (`pwsh`) → Windows PowerShell (`powershell`) → `%ComSpec%` → `cmd.exe`.
+fn pick_shell() -> String {
+    #[cfg(not(windows))]
+    {
+        std::env::var("SHELL").unwrap_or_else(|_| "/bin/sh".to_string())
+    }
+    #[cfg(windows)]
+    {
+        if which("pwsh.exe") {
+            return "pwsh.exe".to_string();
+        }
+        if which("powershell.exe") {
+            return "powershell.exe".to_string();
+        }
+        std::env::var("ComSpec").unwrap_or_else(|_| "cmd.exe".to_string())
+    }
+}
+
+#[cfg(windows)]
+fn which(exe: &str) -> bool {
+    let path = match std::env::var_os("PATH") {
+        Some(p) => p,
+        None => return false,
+    };
+    for dir in std::env::split_paths(&path) {
+        if dir.join(exe).is_file() {
+            return true;
+        }
+    }
+    false
+}
+
 fn next_session_id() -> String {
     format!(
         "session-{}",
@@ -61,7 +95,7 @@ pub fn spawn_shell(
         })
         .map_err(|e| e.to_string())?;
 
-    let shell = std::env::var("SHELL").unwrap_or_else(|_| "/bin/sh".to_string());
+    let shell = pick_shell();
     let mut cmd = CommandBuilder::new(shell);
     if let Some(cwd) = cwd {
         cmd.cwd(cwd);

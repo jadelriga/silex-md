@@ -1,5 +1,6 @@
 import type { VaultEntry, BoardLayout } from "$lib/api/vault";
 import { noteRelativePath, noteHref } from "$lib/utils/notePath";
+import { fmtShortcut } from "$lib/utils/platform";
 
 export type PaletteItemKind = "board" | "note" | "task" | "action";
 export type PaletteCategory = "navigation" | "command";
@@ -96,7 +97,7 @@ export function buildPaletteItems(s: PaletteSources): PaletteItem[] {
     kind: "action",
     category: "command",
     label: "Toggle terminal panel",
-    hint: "⌘J",
+    hint: fmtShortcut({ mod: true, key: "J" }),
     search: "toggle terminal panel action",
     run: () => s.toggleTerminal(),
   });
@@ -151,7 +152,7 @@ export function buildPaletteItems(s: PaletteSources): PaletteItem[] {
       kind: "action",
       category: "command",
       label: "Open settings…",
-      hint: "⌘,",
+      hint: fmtShortcut({ mod: true, key: "," }),
       search: "open settings preferences action",
       run: () => openSettings(),
     });
