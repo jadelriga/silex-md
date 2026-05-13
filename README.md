@@ -18,7 +18,7 @@ The app reads + writes plain Markdown. There is no proprietary database. Move th
 
 ## Install
 
-Builds are produced by GitHub Actions on every `v*` tag and uploaded to a draft Release. Grab the asset for your platform from `https://github.com/<owner>/<repo>/releases` (replace `<owner>/<repo>` with the eventual repo path).
+Builds are produced by GitHub Actions on every `v*` tag and uploaded to a draft Release. Grab the asset for your platform from <https://github.com/jadelriga/silex-md/releases>.
 
 ### macOS
 
