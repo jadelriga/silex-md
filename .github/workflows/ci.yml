@@ -9,10 +9,13 @@ on:
   push:
     branches-ignore: [main]
 
-# Cancel in-progress runs of the same workflow on the same ref. Saves runner
-# minutes when a PR gets multiple pushes in quick succession.
+# Cancel in-progress runs for the same branch. Without this, a push to a
+# feature branch *and* the resulting PR event both run a separate job for
+# the same commit. Keying on the branch name (rather than github.ref, which
+# differs between push and pull_request events) lets push+PR share a group,
+# so the later-firing event cancels the earlier one.
 concurrency:
-  group: ci-${{ github.workflow }}-${{ github.ref }}
+  group: ci-${{ github.workflow }}-${{ github.event.pull_request.head.ref || github.ref_name }}
   cancel-in-progress: true
 
 jobs:
