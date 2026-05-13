@@ -1,18 +1,24 @@
 name: CI
 
-# Runs the full check suite on every PR targeting main and on every push to a
-# branch that isn't main. Push-to-main is intentionally excluded — once the
-# repo is on origin, main will be protected and the only path in is via PR.
+# PR-driven flow: CI runs on every PR targeting main, plus on push-to-main
+# itself (a defence-in-depth check that catches bad rebases or merges).
+# Feature-branch pushes don't run on their own — open a (draft) PR to get
+# CI feedback. This avoids the GitHub quirk where push + pull_request events
+# for the same commit produce two parallel runs (one then cancels the
+# other, leaving a noisy "cancelled" red X on the PR forever).
 on:
   pull_request:
     branches: [main]
   push:
-    branches-ignore: [main]
+    branches: [main]
 
-# Cancel in-progress runs of the same workflow on the same ref. Saves runner
-# minutes when a PR gets multiple pushes in quick succession.
+# Cancel in-progress runs for the same branch. Without this, a push to a
+# feature branch *and* the resulting PR event both run a separate job for
+# the same commit. Keying on the branch name (rather than github.ref, which
+# differs between push and pull_request events) lets push+PR share a group,
+# so the later-firing event cancels the earlier one.
 concurrency:
-  group: ci-${{ github.workflow }}-${{ github.ref }}
+  group: ci-${{ github.workflow }}-${{ github.event.pull_request.head.ref || github.ref_name }}
   cancel-in-progress: true
 
 jobs:
