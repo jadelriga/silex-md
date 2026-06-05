@@ -7,8 +7,9 @@ import {
   WidgetType,
 } from "@codemirror/view";
 import { syntaxTree } from "@codemirror/language";
-import { type Extension, type Range } from "@codemirror/state";
+import { Facet, type Extension, type Range } from "@codemirror/state";
 import { convertFileSrc } from "@tauri-apps/api/core";
+import { dirnameOf, resolveImageSrc } from "$lib/utils/imagePath";
 
 /**
  * Obsidian-style live-preview decorations on top of CodeMirror 6 + Lezer
@@ -25,6 +26,25 @@ import { convertFileSrc } from "@tauri-apps/api/core";
  * Checkboxes are an exception — they always render as widgets so the
  * user can click to toggle without first revealing the brackets.
  */
+
+export interface ImageContext {
+  /** Absolute path of the open file ("" until known). */
+  notePath: string;
+  /** Absolute vault root ("" until the vault is loaded). */
+  vaultRoot: string;
+}
+
+/**
+ * Holds a getter so the value tracks reactive Svelte props/stores without
+ * CodeMirror reconfiguration: the closure is installed once at editor
+ * construction, and any file switch replaces the document, which triggers a
+ * decoration rebuild that re-reads it. Read per `buildDecorations` call —
+ * never cache the result in the plugin constructor.
+ */
+export const imageContext = Facet.define<() => ImageContext, () => ImageContext>({
+  combine: (values) =>
+    values[values.length - 1] ?? (() => ({ notePath: "", vaultRoot: "" })),
+});
 
 class CheckboxWidget extends WidgetType {
   constructor(
@@ -71,6 +91,7 @@ class CheckboxWidget extends WidgetType {
 }
 
 class ImageWidget extends WidgetType {
+  /** `src` is the final, already-resolved <img> src (so `eq` compares it). */
   constructor(
     readonly src: string,
     readonly alt: string,
@@ -84,7 +105,7 @@ class ImageWidget extends WidgetType {
 
   toDOM(): HTMLElement {
     const img = document.createElement("img");
-    img.src = resolveImgSrc(this.src);
+    img.src = this.src;
     img.alt = this.alt;
     img.className = "cm-md-image";
     return img;
@@ -95,10 +116,15 @@ class ImageWidget extends WidgetType {
   }
 }
 
-function resolveImgSrc(src: string): string {
-  if (/^https?:\/\//i.test(src) || /^data:/i.test(src)) return src;
-  if (src.startsWith("file://")) return convertFileSrc(src.slice("file://".length));
-  return convertFileSrc(src);
+/** The single edge that touches Tauri: resolveImageSrc does the pure path
+ * math (relative → note dir, leading "/" → vault root), convertFileSrc maps
+ * local paths onto the asset protocol. Returns null when a local path can't
+ * be resolved yet (vault not loaded). */
+function toImgSrc(src: string, notePath: string, vaultRoot: string): string | null {
+  const resolved = resolveImageSrc(src, dirnameOf(notePath), vaultRoot);
+  if (resolved.kind === "remote") return resolved.src;
+  if (!vaultRoot) return null;
+  return convertFileSrc(resolved.fsPath);
 }
 
 function nodeOverlapsCursorLine(view: EditorView, from: number, to: number): boolean {
@@ -219,11 +245,15 @@ function buildDecorations(view: EditorView): DecorationSet {
               const text = view.state.doc.sliceString(node.from, node.to);
               const m = /^!\[([^\]]*)\]\(([^)]+)\)$/.exec(text);
               if (m) {
-                decos.push(
-                  Decoration.replace({
-                    widget: new ImageWidget(m[2], m[1]),
-                  }).range(node.from, node.to),
-                );
+                const { notePath, vaultRoot } = view.state.facet(imageContext)();
+                const src = toImgSrc(m[2], notePath, vaultRoot);
+                if (src !== null) {
+                  decos.push(
+                    Decoration.replace({
+                      widget: new ImageWidget(src, m[1]),
+                    }).range(node.from, node.to),
+                  );
+                }
               }
             }
             break;

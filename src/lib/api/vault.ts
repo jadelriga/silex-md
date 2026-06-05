@@ -30,6 +30,16 @@ export const vaultApi = {
   writeTask(path: string, content: string): Promise<string> {
     return invoke("write_task", { path, content });
   },
+  /** Saves pasted image bytes into `<vault>/attachments/` and returns the
+   * vault-rooted markdown path (`/attachments/<name>`). Bytes travel as the
+   * raw IPC body; metadata rides in headers, which must be ASCII — the vault
+   * path is percent-encoded (decoded Rust-side) and `fileName` is
+   * app-generated ASCII, never user input. */
+  saveAttachment(vaultPath: string, fileName: string, bytes: ArrayBuffer): Promise<string> {
+    return invoke("save_attachment", bytes, {
+      headers: { "x-vault": encodeURIComponent(vaultPath), "x-filename": fileName },
+    });
+  },
   moveTask(from: string, to: string, overwrite = false): Promise<void> {
     return invoke("move_task", { from, to, overwrite });
   },
