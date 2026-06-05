@@ -20,6 +20,12 @@ The app reads + writes plain Markdown. There is no proprietary database. Move th
 
 Builds are produced by GitHub Actions on every `v*` tag and uploaded to a draft Release. Grab the asset for your platform from <https://github.com/jadelriga/silex-md/releases>.
 
+### Updates
+
+From **v0.2.0** onward Silex updates itself: it checks the latest GitHub Release at launch (and on *Silex → Check for Updates…*) and offers a one-click *Install & Relaunch*. Updates are verified against the project's signing key, and — because the app downloads them itself — they don't pick up the quarantine flag, so no Gatekeeper workaround is needed for updates.
+
+Only the **first install** is manual (including the workarounds below). v0.1.x installs predate the updater and need one last manual install of v0.2.0.
+
 ### macOS
 
 Download the `.dmg` for your architecture (Apple Silicon → `aarch64`, Intel → `x86_64`), open it, drag Silex to Applications.
@@ -41,7 +47,7 @@ WebView2 is required and ships with Windows 11 / current Windows 10. If you're o
 
 ### Linux
 
-Choose the `.AppImage` for the most portable experience, or the `.deb` for Debian/Ubuntu-derived distros. AppImage:
+Choose the `.AppImage` for the most portable experience, or the `.deb` for Debian/Ubuntu-derived distros. In-app self-update only works for AppImage — `.deb` installs are upgraded through your package manager (i.e. manually re-download the new `.deb`). AppImage:
 
 ```bash
 chmod +x Silex_*.AppImage

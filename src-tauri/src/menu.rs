@@ -14,6 +14,8 @@ pub fn build_menu(app: &AppHandle) -> tauri::Result<Menu<Wry>> {
     // route Preferences into Edit instead (Win/Linux convention).
     #[cfg(target_os = "macos")]
     let app_menu = {
+        let check_for_updates =
+            MenuItemBuilder::with_id("check-for-updates", "Check for Updates…").build(app)?;
         let about_metadata = AboutMetadataBuilder::new().name(Some("Silex")).build();
         SubmenuBuilder::new(app, "Silex")
             .item(&PredefinedMenuItem::about(
@@ -21,6 +23,7 @@ pub fn build_menu(app: &AppHandle) -> tauri::Result<Menu<Wry>> {
                 Some("About Silex"),
                 Some(about_metadata),
             )?)
+            .item(&check_for_updates)
             .separator()
             .item(&preferences)
             .separator()
