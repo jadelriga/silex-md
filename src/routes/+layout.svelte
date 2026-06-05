@@ -441,7 +441,6 @@
                   title={board.name}
                 >
                   {board.name}
-                  <span class="text-xs text-fg-faint">({board.columns.length})</span>
                 </a>
               {/if}
             {/each}
