@@ -17,9 +17,15 @@ pub fn run() {
         .plugin(tauri_plugin_store::Builder::new().build())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_opener::init())
+        .plugin(tauri_plugin_process::init())
         .manage(WatcherState::new())
         .manage(PtyState::new())
         .setup(|app| {
+            // Updater is desktop-only; registered in setup so the cfg guard
+            // can be a statement instead of a builder-chain entry.
+            #[cfg(desktop)]
+            app.handle()
+                .plugin(tauri_plugin_updater::Builder::new().build())?;
             let m = menu::build_menu(app.handle())?;
             app.set_menu(m)?;
             Ok(())
