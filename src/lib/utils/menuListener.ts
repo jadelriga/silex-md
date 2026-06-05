@@ -16,7 +16,8 @@ export type MenuActionId =
   | "calendar"
   | "theme-system"
   | "theme-light"
-  | "theme-dark";
+  | "theme-dark"
+  | "check-for-updates";
 
 export type MenuActions = Partial<Record<MenuActionId, () => void | Promise<void>>>;
 

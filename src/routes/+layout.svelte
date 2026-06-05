@@ -14,6 +14,7 @@
   import { startSync } from "$lib/sync";
   import { startMenuListener } from "$lib/utils/menuListener";
   import { startScheduler, stopScheduler, runCheckNow } from "$lib/scheduler";
+  import { checkForUpdates } from "$lib/updater";
   import VaultSetup from "$lib/components/VaultSetup.svelte";
   import TaskDetailPanel from "$lib/components/TaskDetailPanel.svelte";
   import NotesTree from "$lib/components/NotesTree.svelte";
@@ -116,6 +117,7 @@
     vault.load();
     void theme.load();
     void settings.load();
+    void checkForUpdates({ silent: true });
     let unlistenSync: UnlistenFn | null = null;
     let unlistenMenu: UnlistenFn | null = null;
     startSync().then((u) => (unlistenSync = u));
@@ -192,6 +194,7 @@
       "theme-system": () => void theme.setPref("system"),
       "theme-light": () => void theme.setPref("light"),
       "theme-dark": () => void theme.setPref("dark"),
+      "check-for-updates": () => void checkForUpdates(),
     }).then((u) => (unlistenMenu = u));
     return () => {
       unlistenSync?.();
