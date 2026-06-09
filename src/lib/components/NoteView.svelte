@@ -175,7 +175,7 @@
       {#if !bodyLoaded}
         <div class="p-6 text-fg-subtle text-sm">Loading…</div>
       {:else}
-        <CodeMirrorEditor value={bodyDraft} onChange={onBodyChange} />
+        <CodeMirrorEditor value={bodyDraft} onChange={onBodyChange} {path} />
       {/if}
     </div>
   {/if}

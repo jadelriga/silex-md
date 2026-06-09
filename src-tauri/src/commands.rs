@@ -8,7 +8,7 @@ use gray_matter::Matter;
 use notify::{EventKind, RecommendedWatcher, RecursiveMode, Watcher};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
-use tauri::{AppHandle, Emitter, State};
+use tauri::{AppHandle, Emitter, Manager, State};
 use tempfile::NamedTempFile;
 use walkdir::WalkDir;
 
@@ -141,9 +141,14 @@ pub async fn list_note_folders(vault_path: String) -> Result<Vec<String>, String
     if !vault.is_dir() {
         return Err(format!("Vault path is not a directory: {}", vault_path));
     }
+    do_list_note_folders(&vault)
+}
+
+fn do_list_note_folders(vault: &Path) -> Result<Vec<String>, String> {
     let boards_dir = vault.join("boards");
     let templates_dir = vault.join("templates");
     let reminders_dir = vault.join("reminders");
+    let attachments_dir = vault.join("attachments");
     let mut out: Vec<String> = Vec::new();
 
     for entry in WalkDir::new(&vault)
@@ -155,6 +160,7 @@ pub async fn list_note_folders(vault_path: String) -> Result<Vec<String>, String
             !p.starts_with(&boards_dir)
                 && !p.starts_with(&templates_dir)
                 && !p.starts_with(&reminders_dir)
+                && !p.starts_with(&attachments_dir)
         })
         .filter_map(|e| e.ok())
     {
@@ -468,6 +474,90 @@ pub async fn write_task(path: String, content: String) -> Result<String, String>
     Ok(hash_bytes(content.as_bytes()))
 }
 
+/// Saves a pasted image into `<vault>/attachments/` and returns the
+/// vault-rooted markdown path (`/attachments/<name>`). The image bytes arrive
+/// as the raw IPC body (avoids JSON-encoding megabytes); the vault path and
+/// suggested filename come in `x-vault` / `x-filename` headers. Header values
+/// must be ASCII, so the JS side percent-encodes the vault path (the filename
+/// is app-generated ASCII). Sync command: `Request` is a borrowed type, which
+/// async commands don't support.
+#[tauri::command]
+pub fn save_attachment(request: tauri::ipc::Request<'_>) -> Result<String, String> {
+    let tauri::ipc::InvokeBody::Raw(bytes) = request.body() else {
+        return Err("save_attachment expects a raw binary body".to_string());
+    };
+    let header = |name: &str| {
+        request
+            .headers()
+            .get(name)
+            .and_then(|v| v.to_str().ok())
+            .map(|v| v.to_string())
+    };
+    let vault_encoded = header("x-vault").ok_or("missing x-vault header")?;
+    let vault = percent_encoding::percent_decode_str(&vault_encoded)
+        .decode_utf8()
+        .map_err(|e| e.to_string())?
+        .into_owned();
+    let name = header("x-filename").unwrap_or_default();
+    do_save_attachment(Path::new(&vault), &name, bytes)
+}
+
+fn do_save_attachment(vault: &Path, name: &str, bytes: &[u8]) -> Result<String, String> {
+    if bytes.is_empty() {
+        return Err("Refusing to save an empty attachment".to_string());
+    }
+    // Fall back to a generated name rather than erroring: the name is
+    // app-generated convenience metadata, not user input worth rejecting over.
+    let safe_name = if is_invalid_segment(name) {
+        format!("pasted-{}.png", now_millis())
+    } else {
+        name.to_string()
+    };
+
+    let attachments = vault.join("attachments");
+    fs::create_dir_all(&attachments).map_err(|e| e.to_string())?;
+    let final_path = unique_path(&attachments, &safe_name);
+
+    let mut tmp = NamedTempFile::new_in(&attachments).map_err(|e| e.to_string())?;
+    tmp.write_all(bytes).map_err(|e| e.to_string())?;
+    tmp.flush().map_err(|e| e.to_string())?;
+    tmp.persist(&final_path).map_err(|e| e.to_string())?;
+
+    let file_name = final_path
+        .file_name()
+        .map(|n| n.to_string_lossy().into_owned())
+        .ok_or("attachment path has no file name")?;
+    Ok(format!("/attachments/{}", file_name))
+}
+
+/// Returns a non-colliding path inside `dir` for `name`, appending `-N`
+/// before the extension if needed.
+fn unique_path(dir: &Path, name: &str) -> PathBuf {
+    let candidate = dir.join(name);
+    if !candidate.exists() {
+        return candidate;
+    }
+    let (stem, ext) = match name.rsplit_once('.') {
+        Some((s, e)) => (s, format!(".{}", e)),
+        None => (name, String::new()),
+    };
+    let mut n = 1u32;
+    loop {
+        let candidate = dir.join(format!("{}-{}{}", stem, n, ext));
+        if !candidate.exists() {
+            return candidate;
+        }
+        n += 1;
+    }
+}
+
+fn now_millis() -> u128 {
+    std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_millis())
+        .unwrap_or(0)
+}
+
 #[tauri::command]
 pub async fn move_task(
     from: String,
@@ -720,6 +810,13 @@ pub async fn watch_vault(
         .watch(Path::new(&path), RecursiveMode::Recursive)
         .map_err(|e| e.to_string())?;
     *guard = Some(watcher);
+
+    // Grant the webview asset:// read access to the vault tree so locally
+    // referenced images render. The static scope in tauri.conf.json is empty;
+    // this runtime grant re-applies on every vault open.
+    app.asset_protocol_scope()
+        .allow_directory(Path::new(&path), true)
+        .map_err(|e| e.to_string())?;
     Ok(())
 }
 
@@ -1128,5 +1225,57 @@ mod tests {
     fn create_task_rejects_when_column_does_not_exist() {
         let dir = tempfile::tempdir().unwrap();
         assert!(do_create_task(dir.path(), "b", "c", "T", None).is_err());
+    }
+
+    #[test]
+    fn save_attachment_writes_file_and_returns_vault_rooted_path() {
+        let dir = tempfile::tempdir().unwrap();
+        let result = do_save_attachment(dir.path(), "pasted-1.png", b"\x89PNG fake").unwrap();
+        assert_eq!(result, "/attachments/pasted-1.png");
+        let written = dir.path().join("attachments").join("pasted-1.png");
+        assert_eq!(fs::read(&written).unwrap(), b"\x89PNG fake");
+    }
+
+    #[test]
+    fn save_attachment_resolves_collisions_with_suffix() {
+        let dir = tempfile::tempdir().unwrap();
+        let r1 = do_save_attachment(dir.path(), "pasted-1.png", b"a").unwrap();
+        let r2 = do_save_attachment(dir.path(), "pasted-1.png", b"b").unwrap();
+        assert_eq!(r1, "/attachments/pasted-1.png");
+        assert_eq!(r2, "/attachments/pasted-1-1.png");
+        let attachments = dir.path().join("attachments");
+        assert_eq!(fs::read(attachments.join("pasted-1.png")).unwrap(), b"a");
+        assert_eq!(fs::read(attachments.join("pasted-1-1.png")).unwrap(), b"b");
+    }
+
+    #[test]
+    fn save_attachment_regenerates_unsafe_filenames_inside_attachments() {
+        let dir = tempfile::tempdir().unwrap();
+        let result = do_save_attachment(dir.path(), "../evil.png", b"x").unwrap();
+        assert!(result.starts_with("/attachments/pasted-"));
+        assert!(!dir.path().join("evil.png").exists());
+        // Exactly one file, and it lives inside attachments/.
+        let entries: Vec<_> = fs::read_dir(dir.path().join("attachments"))
+            .unwrap()
+            .filter_map(|e| e.ok())
+            .collect();
+        assert_eq!(entries.len(), 1);
+    }
+
+    #[test]
+    fn save_attachment_rejects_empty_bytes() {
+        let dir = tempfile::tempdir().unwrap();
+        assert!(do_save_attachment(dir.path(), "pasted-1.png", b"").is_err());
+        assert!(!dir.path().join("attachments").exists());
+    }
+
+    #[test]
+    fn list_note_folders_excludes_attachments() {
+        let dir = tempfile::tempdir().unwrap();
+        for folder in ["attachments", "journal", "templates", "boards", "reminders"] {
+            fs::create_dir_all(dir.path().join(folder)).unwrap();
+        }
+        let folders = do_list_note_folders(dir.path()).unwrap();
+        assert_eq!(folders, vec!["journal".to_string()]);
     }
 }
