@@ -38,3 +38,20 @@ tauri-plugin-process = "2"
 [target."cfg(any(target_os = \"macos\", windows, target_os = \"linux\"))".dependencies]
 tauri-plugin-updater = "2"
 
+# Native UNUserNotificationCenter path: correct icon attribution and
+# click-to-open, which tauri-plugin-notification can't do on desktop.
+[target."cfg(target_os = \"macos\")".dependencies]
+objc2 = "0.6"
+block2 = "0.6"
+objc2-foundation = { version = "0.3", features = ["NSBundle", "NSDictionary", "NSError", "NSString"] }
+objc2-user-notifications = { version = "0.3", features = [
+  "UNNotification",
+  "UNNotificationContent",
+  "UNNotificationRequest",
+  "UNNotificationResponse",
+  "UNNotificationSound",
+  "UNNotificationTrigger",
+  "UNUserNotificationCenter",
+  "block2",
+] }
+

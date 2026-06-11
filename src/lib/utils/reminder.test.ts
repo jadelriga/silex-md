@@ -1,5 +1,12 @@
 import { describe, it, expect } from "vitest";
-import { splitReminder, joinReminder, formatReminder, todayIsoDate } from "./reminder";
+import {
+  splitReminder,
+  joinReminder,
+  formatReminder,
+  formatReminderDate,
+  reminderStatus,
+  todayIsoDate,
+} from "./reminder";
 
 describe("todayIsoDate", () => {
   it("formats as YYYY-MM-DD", () => {
@@ -62,5 +69,53 @@ describe("formatReminder", () => {
 
   it("returns the raw value when not parseable", () => {
     expect(formatReminder("not a date")).toBe("not a date");
+  });
+});
+
+describe("formatReminderDate", () => {
+  const now = new Date(2026, 5, 10); // 2026-06-10
+
+  it("returns empty string for null / empty", () => {
+    expect(formatReminderDate(null, now)).toBe("");
+    expect(formatReminderDate("", now)).toBe("");
+  });
+
+  it("formats a same-year date without the year", () => {
+    const result = formatReminderDate("2026-06-12T09:00", now);
+    expect(result).toMatch(/jun/i);
+    expect(result).toContain("12");
+    expect(result).not.toContain("2026");
+  });
+
+  it("includes the year when it differs from now", () => {
+    expect(formatReminderDate("2027-01-05T09:00", now)).toContain("2027");
+  });
+
+  it("returns the raw value when not parseable", () => {
+    expect(formatReminderDate("not a date", now)).toBe("not a date");
+  });
+});
+
+describe("reminderStatus", () => {
+  const now = new Date(2026, 5, 10, 12, 0); // 2026-06-10 12:00
+
+  it("returns null for null / empty / unparseable", () => {
+    expect(reminderStatus(null, now)).toBeNull();
+    expect(reminderStatus("", now)).toBeNull();
+    expect(reminderStatus("not a date", now)).toBeNull();
+  });
+
+  it("classifies past datetimes as overdue", () => {
+    expect(reminderStatus("2026-06-09T09:00", now)).toBe("overdue");
+    expect(reminderStatus("2026-06-10T11:59", now)).toBe("overdue");
+  });
+
+  it("classifies later-today datetimes as today", () => {
+    expect(reminderStatus("2026-06-10T18:00", now)).toBe("today");
+  });
+
+  it("classifies future days as upcoming", () => {
+    expect(reminderStatus("2026-06-11T09:00", now)).toBe("upcoming");
+    expect(reminderStatus("2027-01-01T09:00", now)).toBe("upcoming");
   });
 });

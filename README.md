@@ -39,6 +39,12 @@ xattr -d com.apple.quarantine /Applications/Silex.app
 
 Or right-click → Open → Open in the dialog (works once, then macOS remembers).
 
+#### Notifications on macOS
+
+- Reminders appear as **temporary banners** by default. For notifications that stay until dismissed, set Silex to **Alerts** in System Settings → Notifications → Silex — that style is a per-app user setting macOS doesn't let apps choose for themselves.
+- Clicking a reminder notification opens Silex on that task or reminder. This only works from the installed `.app` (in `npm run tauri dev` there's no app bundle, so notifications fall back to the basic plugin path with no click handling and wrong sender attribution).
+- If a notification shows an **outdated app icon**, that's macOS's notification icon cache, not the app: quit Silex, run `killall NotificationCenter`, and reopen. Stubborn cases: toggle Silex off/on in System Settings → Notifications, or log out and back in.
+
 ### Windows
 
 Download the `.msi` (recommended) or the `.exe` (NSIS installer). On first launch SmartScreen will warn ("Windows protected your PC"). Click *More info* → *Run anyway*.

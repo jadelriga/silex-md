@@ -10,6 +10,12 @@ export function todayIsoDate(now: Date = new Date()): string {
   return `${y}-${m}-${d}`;
 }
 
+export function currentTimeHM(now: Date = new Date()): string {
+  const h = String(now.getHours()).padStart(2, "0");
+  const m = String(now.getMinutes()).padStart(2, "0");
+  return `${h}:${m}`;
+}
+
 export function splitReminder(iso: string | null | undefined): ReminderParts {
   if (!iso || typeof iso !== "string") {
     return { date: todayIsoDate(), time: "09:00" };
@@ -35,4 +41,33 @@ export function formatReminder(iso: string | null | undefined): string {
     minute: "2-digit",
     hour12: false,
   });
+}
+
+/** Compact date-only label ("Jun 12") for card badges; the year is added
+ * only when it differs from the current one. */
+export function formatReminderDate(
+  iso: string | null | undefined,
+  now: Date = new Date(),
+): string {
+  if (!iso || typeof iso !== "string") return "";
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return iso;
+  const opts: Intl.DateTimeFormatOptions = { month: "short", day: "numeric" };
+  if (d.getFullYear() !== now.getFullYear()) opts.year = "numeric";
+  return d.toLocaleDateString(undefined, opts);
+}
+
+export type ReminderStatus = "overdue" | "today" | "upcoming";
+
+/** Classify a reminder relative to `now` for badge colouring. */
+export function reminderStatus(
+  iso: string | null | undefined,
+  now: Date = new Date(),
+): ReminderStatus | null {
+  if (!iso || typeof iso !== "string") return null;
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return null;
+  if (d.getTime() < now.getTime()) return "overdue";
+  if (todayIsoDate(d) === todayIsoDate(now)) return "today";
+  return "upcoming";
 }
