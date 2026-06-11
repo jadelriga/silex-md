@@ -40,6 +40,11 @@ export const vaultApi = {
       headers: { "x-vault": encodeURIComponent(vaultPath), "x-filename": fileName },
     });
   },
+  /** Copies the file verbatim to a sibling `<stem>-copy.md` (collision-
+   * suffixed) and returns the new absolute path. */
+  duplicateTask(path: string): Promise<string> {
+    return invoke("duplicate_task", { path });
+  },
   moveTask(from: string, to: string, overwrite = false): Promise<void> {
     return invoke("move_task", { from, to, overwrite });
   },
@@ -94,8 +99,13 @@ export const vaultApi = {
   ): Promise<void> {
     return invoke("set_board_column_order", { vaultPath, boardName, columns });
   },
-  createReminder(vaultPath: string, title: string, reminder: string): Promise<string> {
-    return invoke("create_reminder", { vaultPath, title, reminder });
+  createReminder(
+    vaultPath: string,
+    title: string,
+    reminder: string,
+    repeat?: string,
+  ): Promise<string> {
+    return invoke("create_reminder", { vaultPath, title, reminder, repeat: repeat ?? null });
   },
   createTask(
     vaultPath: string,

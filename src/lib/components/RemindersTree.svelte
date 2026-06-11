@@ -5,6 +5,8 @@
   import { vaultApi } from "$lib/api/vault";
   import { noteHref, noteRelativePath, decodeNoteRouteParam } from "$lib/utils/notePath";
   import { formatReminder } from "$lib/utils/reminder";
+  import { parseRepeat, repeatLabel, type Repeat } from "$lib/utils/recur";
+  import { skipNextOccurrence } from "$lib/scheduler";
   import { withContextMenu } from "$lib/utils/contextMenu";
   import { confirm } from "$lib/stores/confirm.svelte";
   import type { VaultEntry } from "$lib/api/vault";
@@ -12,15 +14,35 @@
   let pastExpanded = $state(false);
 
   function deleteReminder(entry: VaultEntry) {
+    const recurring = repeatOf(entry) !== null;
     confirm.ask({
       title: `Delete reminder "${reminderTitle(entry)}"?`,
-      message: "The reminder file will be moved to the Trash.",
+      message: recurring
+        ? "This ends the whole series — the reminder file will be moved to the Trash."
+        : "The reminder file will be moved to the Trash.",
       confirmLabel: "Move to Trash",
       danger: true,
       onConfirm: async () => {
         await vaultApi.deletePath(entry.path);
       },
     });
+  }
+
+  function repeatOf(e: VaultEntry): Repeat | null {
+    const fm = (e.frontmatter ?? {}) as Record<string, unknown>;
+    return parseRepeat(fm.repeat);
+  }
+
+  function contextItems(e: VaultEntry) {
+    const items: { label: string; action: () => void; danger?: boolean }[] = [];
+    if (repeatOf(e)) {
+      items.push({
+        label: "Skip next occurrence",
+        action: () => void skipNextOccurrence(e),
+      });
+    }
+    items.push({ label: "Delete reminder…", danger: true, action: () => deleteReminder(e) });
+    return items;
   }
 
   function reminderTime(e: VaultEntry): string {
@@ -66,11 +88,10 @@
 
 {#each active as r (r.path)}
   {@const rp = relPath(r)}
+  {@const repeat = repeatOf(r)}
   <a
     href={noteHref(rp)}
-    use:withContextMenu={() => [
-      { label: "Delete reminder…", danger: true, action: () => deleteReminder(r) },
-    ]}
+    use:withContextMenu={() => contextItems(r)}
     class="flex items-center justify-between gap-2 px-2 py-0.5 rounded truncate {activeRelativePath ===
     rp
       ? 'bg-surface-2 text-fg'
@@ -78,7 +99,27 @@
     title={rp}
   >
     <span class="truncate">{reminderTitle(r)}</span>
-    <span class="shrink-0 text-xs text-fg-subtle">{formatReminder(reminderTime(r))}</span>
+    <span class="shrink-0 text-xs text-fg-subtle flex items-center gap-1">
+      {#if repeat}
+        <svg
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          aria-hidden="true"
+          class="w-3 h-3 shrink-0"
+        >
+          <title>Repeats {repeatLabel(repeat)}</title>
+          <polyline points="17 1 21 5 17 9" />
+          <path d="M3 11V9a4 4 0 0 1 4-4h14" />
+          <polyline points="7 23 3 19 7 15" />
+          <path d="M21 13v2a4 4 0 0 1-4 4H3" />
+        </svg>
+      {/if}
+      {formatReminder(reminderTime(r))}
+    </span>
   </a>
 {/each}
 
@@ -108,9 +149,7 @@
       {@const rp = relPath(r)}
       <a
         href={noteHref(rp)}
-        use:withContextMenu={() => [
-          { label: "Delete reminder…", danger: true, action: () => deleteReminder(r) },
-        ]}
+        use:withContextMenu={() => contextItems(r)}
         class="flex items-center justify-between gap-2 px-2 py-0.5 pl-7 rounded truncate text-fg-muted opacity-70 hover:bg-surface-2/60"
         title={rp}
       >

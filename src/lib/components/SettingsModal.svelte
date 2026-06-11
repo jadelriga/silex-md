@@ -3,6 +3,7 @@
   import { theme, type ThemePref } from "$lib/stores/theme.svelte";
   import { revealItemInDir } from "@tauri-apps/plugin-opener";
   import { appDataDir, join } from "@tauri-apps/api/path";
+  import { isMac } from "$lib/utils/platform";
 
   let revealError = $state<string | null>(null);
   let revealing = $state(false);
@@ -93,6 +94,17 @@
             {/each}
           </div>
         </section>
+
+        {#if isMac}
+          <section>
+            <h3 class="text-xs uppercase tracking-wide text-fg-subtle mb-2">Notifications</h3>
+            <p class="text-sm text-fg-muted leading-relaxed">
+              macOS shows reminders as temporary banners by default. For notifications that
+              stay on screen until dismissed, set Silex to “Alerts” in System Settings →
+              Notifications → Silex. That choice is per-app and can only be made there.
+            </p>
+          </section>
+        {/if}
 
         <section>
           <h3 class="text-xs uppercase tracking-wide text-fg-subtle mb-2">Settings file</h3>

@@ -6,7 +6,7 @@ vi.mock("@tauri-apps/plugin-notification", () => ({
   sendNotification: vi.fn(),
 }));
 
-import { entryReminderTime, remindersDueAtOrBefore } from "./scheduler";
+import { entryReminderTime, remindersDueAtOrBefore, msUntilNextMinute } from "./scheduler";
 import type { VaultEntry } from "$lib/api/vault";
 
 function task(overrides: { path: string; reminder?: string; title?: string }): VaultEntry {
@@ -44,6 +44,19 @@ describe("entryReminderTime", () => {
     expect(d).not.toBeNull();
     expect(d?.getFullYear()).toBe(2026);
     expect(d?.getHours()).toBe(14);
+  });
+});
+
+describe("msUntilNextMinute", () => {
+  const minute = 60_000;
+
+  it("returns the gap to the next minute boundary", () => {
+    expect(msUntilNextMinute(10 * minute + 30_000)).toBe(30_000);
+    expect(msUntilNextMinute(10 * minute + 59_999)).toBe(1);
+  });
+
+  it("returns a full minute when exactly on the boundary", () => {
+    expect(msUntilNextMinute(10 * minute)).toBe(minute);
   });
 });
 

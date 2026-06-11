@@ -249,10 +249,13 @@ pub async fn create_reminder(
     vault_path: String,
     title: String,
     reminder: String,
+    repeat: Option<String>,
 ) -> Result<String, String> {
-    do_create_reminder(Path::new(&vault_path), &title, &reminder)
+    do_create_reminder(Path::new(&vault_path), &title, &reminder, repeat.as_deref())
         .map(|p| p.to_string_lossy().into_owned())
 }
+
+const VALID_REPEATS: [&str; 5] = ["daily", "weekly", "biweekly", "monthly", "yearly"];
 
 #[tauri::command]
 pub async fn create_task(
@@ -328,7 +331,12 @@ fn do_create_task(
     Ok(path)
 }
 
-fn do_create_reminder(vault: &Path, title: &str, reminder: &str) -> Result<PathBuf, String> {
+fn do_create_reminder(
+    vault: &Path,
+    title: &str,
+    reminder: &str,
+    repeat: Option<&str>,
+) -> Result<PathBuf, String> {
     let trimmed_title = title.trim();
     if trimmed_title.is_empty() {
         return Err("Title cannot be empty".to_string());
@@ -336,6 +344,11 @@ fn do_create_reminder(vault: &Path, title: &str, reminder: &str) -> Result<PathB
     let trimmed_reminder = reminder.trim();
     if trimmed_reminder.is_empty() {
         return Err("Reminder time cannot be empty".to_string());
+    }
+    if let Some(r) = repeat {
+        if !VALID_REPEATS.contains(&r) {
+            return Err(format!("Invalid repeat: {}", r));
+        }
     }
 
     let base_slug = slugify(trimmed_title);
@@ -355,11 +368,19 @@ fn do_create_reminder(vault: &Path, title: &str, reminder: &str) -> Result<PathB
         path = reminders_dir.join(format!("{}.md", slug));
     }
 
-    let content = format!(
-        "---\ntitle: {}\nreminder: {}\n---\n",
+    let mut content = format!(
+        "---\ntitle: {}\nreminder: {}\n",
         yaml_dq(trimmed_title),
         yaml_dq(trimmed_reminder)
     );
+    if let Some(r) = repeat {
+        // `reminder` is rewritten to the next occurrence on every fire;
+        // `repeatFrom` keeps the series anchor so monthly/yearly day-of-month
+        // (e.g. "the 31st") survives clamping through shorter months.
+        content.push_str(&format!("repeat: {}\n", yaml_dq(r)));
+        content.push_str(&format!("repeatFrom: {}\n", yaml_dq(trimmed_reminder)));
+    }
+    content.push_str("---\n");
     fs::write(&path, content).map_err(|e| e.to_string())?;
     Ok(path)
 }
@@ -530,6 +551,39 @@ fn do_save_attachment(vault: &Path, name: &str, bytes: &[u8]) -> Result<String, 
     Ok(format!("/attachments/{}", file_name))
 }
 
+#[tauri::command]
+pub async fn duplicate_task(path: String) -> Result<String, String> {
+    do_duplicate_file(Path::new(&path)).map(|p| p.to_string_lossy().into_owned())
+}
+
+/// Copies `src` verbatim to a sibling `<stem>-copy.md` (collision-suffixed
+/// via `unique_path`). The caller decides whether to retitle the copy
+/// afterwards — keeping the write byte-identical here means no frontmatter
+/// parsing or re-serialisation can drift the content.
+fn do_duplicate_file(src: &Path) -> Result<PathBuf, String> {
+    if src.extension().and_then(|s| s.to_str()) != Some("md") {
+        return Err("Only markdown files can be duplicated".to_string());
+    }
+    if !src.is_file() {
+        return Err(format!("Not a file: {}", src.display()));
+    }
+    let dir = src
+        .parent()
+        .ok_or_else(|| format!("No parent directory for {}", src.display()))?;
+    let stem = src
+        .file_stem()
+        .and_then(|s| s.to_str())
+        .ok_or("Invalid file name")?;
+    let content = fs::read(src).map_err(|e| e.to_string())?;
+    let dest = unique_path(dir, &format!("{}-copy.md", stem));
+
+    let mut tmp = NamedTempFile::new_in(dir).map_err(|e| e.to_string())?;
+    tmp.write_all(&content).map_err(|e| e.to_string())?;
+    tmp.flush().map_err(|e| e.to_string())?;
+    tmp.persist(&dest).map_err(|e| e.to_string())?;
+    Ok(dest)
+}
+
 /// Returns a non-colliding path inside `dir` for `name`, appending `-N`
 /// before the extension if needed.
 fn unique_path(dir: &Path, name: &str) -> PathBuf {
@@ -551,7 +605,7 @@ fn unique_path(dir: &Path, name: &str) -> PathBuf {
     }
 }
 
-fn now_millis() -> u128 {
+pub(crate) fn now_millis() -> u128 {
     std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
         .map(|d| d.as_millis())
@@ -1123,18 +1177,39 @@ mod tests {
     #[test]
     fn create_reminder_creates_file_under_reminders_with_frontmatter() {
         let dir = tempfile::tempdir().unwrap();
-        let path = do_create_reminder(dir.path(), "Call dentist", "2026-05-10T14:30").unwrap();
+        let path =
+            do_create_reminder(dir.path(), "Call dentist", "2026-05-10T14:30", None).unwrap();
         assert_eq!(path, dir.path().join("reminders").join("call-dentist.md"));
         let content = fs::read_to_string(&path).unwrap();
         assert!(content.contains("title: \"Call dentist\""));
         assert!(content.contains("reminder: \"2026-05-10T14:30\""));
+        assert!(!content.contains("repeat:"));
+    }
+
+    #[test]
+    fn create_reminder_writes_repeat_and_anchor() {
+        let dir = tempfile::tempdir().unwrap();
+        let path =
+            do_create_reminder(dir.path(), "Water plants", "2026-06-10T09:40", Some("weekly"))
+                .unwrap();
+        let content = fs::read_to_string(&path).unwrap();
+        assert!(content.contains("repeat: \"weekly\""));
+        assert!(content.contains("repeatFrom: \"2026-06-10T09:40\""));
+    }
+
+    #[test]
+    fn create_reminder_rejects_unknown_repeat() {
+        let dir = tempfile::tempdir().unwrap();
+        assert!(
+            do_create_reminder(dir.path(), "T", "2026-06-10T09:40", Some("fortnightly")).is_err()
+        );
     }
 
     #[test]
     fn create_reminder_appends_counter_on_collision() {
         let dir = tempfile::tempdir().unwrap();
-        let p1 = do_create_reminder(dir.path(), "Same title", "2026-05-10T10:00").unwrap();
-        let p2 = do_create_reminder(dir.path(), "Same title", "2026-05-10T11:00").unwrap();
+        let p1 = do_create_reminder(dir.path(), "Same title", "2026-05-10T10:00", None).unwrap();
+        let p2 = do_create_reminder(dir.path(), "Same title", "2026-05-10T11:00", None).unwrap();
         assert_eq!(p1, dir.path().join("reminders").join("same-title.md"));
         assert_eq!(p2, dir.path().join("reminders").join("same-title-1.md"));
     }
@@ -1142,14 +1217,14 @@ mod tests {
     #[test]
     fn create_reminder_rejects_empty_title() {
         let dir = tempfile::tempdir().unwrap();
-        assert!(do_create_reminder(dir.path(), "  ", "2026-05-10T10:00").is_err());
-        assert!(do_create_reminder(dir.path(), "!!!", "2026-05-10T10:00").is_err());
+        assert!(do_create_reminder(dir.path(), "  ", "2026-05-10T10:00", None).is_err());
+        assert!(do_create_reminder(dir.path(), "!!!", "2026-05-10T10:00", None).is_err());
     }
 
     #[test]
     fn create_reminder_rejects_empty_reminder_time() {
         let dir = tempfile::tempdir().unwrap();
-        assert!(do_create_reminder(dir.path(), "Title", "").is_err());
+        assert!(do_create_reminder(dir.path(), "Title", "", None).is_err());
     }
 
     #[test]
@@ -1225,6 +1300,36 @@ mod tests {
     fn create_task_rejects_when_column_does_not_exist() {
         let dir = tempfile::tempdir().unwrap();
         assert!(do_create_task(dir.path(), "b", "c", "T", None).is_err());
+    }
+
+    #[test]
+    fn duplicate_file_copies_bytes_to_copy_sibling() {
+        let dir = tempfile::tempdir().unwrap();
+        let src = dir.path().join("fix-bug.md");
+        fs::write(&src, "---\ntitle: \"Fix bug\"\n---\nbody text\n").unwrap();
+        let copy = do_duplicate_file(&src).unwrap();
+        assert_eq!(copy, dir.path().join("fix-bug-copy.md"));
+        assert_eq!(fs::read(&copy).unwrap(), fs::read(&src).unwrap());
+    }
+
+    #[test]
+    fn duplicate_file_appends_counter_on_collision() {
+        let dir = tempfile::tempdir().unwrap();
+        let src = dir.path().join("fix-bug.md");
+        fs::write(&src, "content").unwrap();
+        let c1 = do_duplicate_file(&src).unwrap();
+        let c2 = do_duplicate_file(&src).unwrap();
+        assert_eq!(c1, dir.path().join("fix-bug-copy.md"));
+        assert_eq!(c2, dir.path().join("fix-bug-copy-1.md"));
+    }
+
+    #[test]
+    fn duplicate_file_rejects_non_markdown_and_missing_files() {
+        let dir = tempfile::tempdir().unwrap();
+        let png = dir.path().join("image.png");
+        fs::write(&png, "bytes").unwrap();
+        assert!(do_duplicate_file(&png).is_err());
+        assert!(do_duplicate_file(&dir.path().join("missing.md")).is_err());
     }
 
     #[test]

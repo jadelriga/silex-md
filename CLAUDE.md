@@ -88,7 +88,7 @@ The original 15-step build is complete; everything below is post-v1 polish track
 
 ## Non-goals (v1)
 
-Cloud sync. Multi-user. Mobile app. App Store distribution. Plugin system. Recurring calendar events. External calendar sync (Google etc.). Encrypted secrets storage.
+Cloud sync. Multi-user. Mobile app. App Store distribution. Plugin system. Calendar-grid expansion of recurring reminders (the reminders themselves recur since Phase 14; the calendar shows only the next occurrence). External calendar sync (Google etc.). Encrypted secrets storage.
 
 ## Phased backlog plan
 
@@ -116,7 +116,7 @@ Forward-looking grouping of post-v1 polish work. Each phase is roughly one sitti
 
 ### Phase 5 — Keyboard + notification UX
 - [x] **Quick-create shortcuts.** Added `New Task` File-menu item; `Cmd+N` creates a note (matches macOS convention) and `Cmd+Shift+N` creates a task in the active board's leftmost column. New-board accelerator left at `Cmd+Shift+B`. The `addingCardInColumn` ui state replaces Column's local `adding` so the menu shortcut and the per-column "Add a card" button share one source of truth — only one column can be in adding-mode at a time. No-op when not on a board route.
-- [ ] **Click-notification → focus task** — *parked.* `tauri-plugin-notification` 2.3.x is fire-and-forget on desktop: `onAction` is mobile-only and `desktop.rs` emits no events on click, so the JS-side wiring can't receive anything. Tried bypassing it with `mac-notification-sys` directly + `set_application` (com.apple.Terminal in dev, com.silex.app in prod), with a worker thread per notification waiting on the blocking `send()` for `NotificationResponse::Click` — got muddled by macOS sender attribution (notifications appeared to come from Finder/Terminal in dev) and a permission prompt round trip. Reverted. Revisit when either upstream adds desktop click support OR when we have a proper `.app` bundle from `tauri build` to test against (dev-mode `cargo run` doesn't have a stable bundle id, which is the root of the attribution mess).
+- [x] **Click-notification → focus task** — resolved in Phase 13 via our own `UNUserNotificationCenter` layer (`notify_mac.rs`). The original blockers stand for dev mode only: a bare `tauri dev` binary has no bundle id, so the native path is gated off there and notifications fall back to the plugin (fire-and-forget, wrong attribution). Bundled builds get correct icon + click-to-open.
 - [ ] **Arrow-key card nav** (`arrow-key-card-nav` task). Non-trivial focus model with svelte-dnd-action — likely needs a dedicated focus-ring abstraction.
 
 ### Phase 6 — Live-preview markdown editor (Option C)
@@ -149,6 +149,30 @@ User decision (2026-05-03): replace the preview/edit toggle with an Obsidian-sty
 
 - [x] **Sidebar column counts removed.** The `(N)` next to each board name in the sidebar was noise; deleted. The command palette still shows "N columns" as a search hint — kept deliberately.
 - [x] **Selection drags no longer close panels.** Users selecting text in the task panel would release the mouse outside it, and the browser dispatches that `click` on the *common ancestor* of press/release — outside the panel — so `clickOutside` closed it mid-selection. Fix in `clickOutside.ts`: a capture-phase `pointerdown` listener records where the gesture started; clicks whose press began inside the node are ignored. Applies to every `clickOutside` consumer (task panel, reminder popover, filter chips, context menus). Unit-tested incl. the drag-out case.
+
+### Phase 12 — Structure cleanup + card affordances
+
+- [x] **Shared `EntryStore` base.** `src/lib/stores/entryStore.svelte.ts` holds the entries-map + isLoaded/error lifecycle, `save` (hash-registered atomic write), `upsert`/`remove` once; `tasks` and `reminders` are now plain `new EntryStore(kind)` instances and `NotesStore` extends it, overriding the `refreshEntries`/`clear` hooks for its folders/tree extras. Net ~−120 lines of triplicated store code.
+- [x] **`startEdgeResize` utility.** `src/lib/utils/panelResize.ts` replaces the two near-identical drag-resize handlers in the layout (task panel x-axis, terminal y-axis); unit-tested incl. clamping and listener teardown.
+- [x] **Sidebar extracted from `+layout.svelte`.** New `src/lib/components/Sidebar.svelte` owns the boards/reminders/notes sections plus their create/rename/delete and notes-root drag/drop handlers; `activeBoardFromPathname` + `basename` moved to `src/lib/utils/routes.ts` (shared by layout menu actions and sidebar). Layout went 632 → ~310 lines.
+- [x] **Reminder badges on cards.** Cards show a bell + compact date ("Jun 12", year added when ≠ current) when the task has a `reminder`; red when overdue, amber when due later today, subtle otherwise (`reminderStatus`/`formatReminderDate` in `reminder.ts`, unit-tested). Full datetime in the tooltip.
+- [x] **Duplicate card.** Card context menu → "Duplicate card". Rust `duplicate_task` copies the file verbatim to a collision-suffixed `<stem>-copy.md` sibling (atomic temp+rename, no frontmatter re-serialisation so zero byte drift); the frontend then retitles the copy to "… (copy)" through the standard `tasks.save` path when a title exists. Same `order` key means the copy lands next to the original.
+
+### Phase 13 — Reminder UX + native macOS notifications
+
+- [x] **Inline month calendar for reminder pickers.** New `MonthCalendar.svelte` over a pure `calendarGrid.ts` (Monday-start 6×7 grid, unit-tested). Used always-visible in `NewReminderDialog` and in the task panel's `ReminderPopover` (replaces both native `<input type="date">`s). Past days are grayed/disabled (`min` prop); today is ringed; selected day accent-filled.
+- [x] **Time defaults + past-blocking.** Opening a picker defaults to today + current time (`currentTimeHM`); clicking a different day sets 09:00; clicking back on today restores current time. Create/Set are disabled (with a hint) when the chosen datetime is past; the dialog re-checks the wall clock at submit since the derived flag goes stale if it sits open. Calendar-view clicks on past days clamp to today.
+- [x] **Minute-aligned scheduler.** `setInterval(60s)` → chained `setTimeout` re-aimed at the next wall-clock minute boundary every tick (`msUntilNextMinute`, tested) + a `visibilitychange` catch-up check so reminders fire promptly after sleep/wake. Alignment is best-effort under WKWebView timer throttling.
+- [x] **Native macOS notifications with click-to-open.** `notify_mac.rs`: `UNUserNotificationCenter` via `objc2-user-notifications` (same objc2 0.6 family tauri already pulls). `init` (in setup) registers a delegate + requests authorization — gated on `NSBundle` having a bundle id, so dev binaries skip it (the center traps without a bundle; this was the root of the old parked attempt). `notify_native(title, body, targetPath)` carries the entry path in `userInfo`; returns `false` when unavailable and the JS scheduler falls back to `tauri-plugin-notification`. Click → delegate stores the path in a pending slot, focuses the window on the main thread, emits `notification:clicked`. JS side (`notifyClick.ts`): live listener opens boards-tasks via board route + `ui.openTaskPath`, everything else via note view; cold-start clicks are pulled with `take_pending_notification_click` once tasks load. Reminders are moved to `past/` **before** notifying so the click target is the post-move path. **Only verifiable in a bundled `.app`** — dev mode keeps plugin behavior.
+- [x] **Docs.** README macOS section + Settings modal (macOS-only) note: banner-vs-Alerts is a per-app user setting apps can't choose; stale notification icon = macOS cache (`killall NotificationCenter`).
+
+### Phase 14 — Recurring reminders
+
+- [x] **Single-file recurrence model.** `reminder:` always holds the *next* occurrence; `repeat:` (daily/weekly/biweekly/monthly/yearly) marks the series; `repeatFrom:` stores the creation-time anchor so "monthly on the 31st" clamps through short months (Feb 28) without permanently drifting. On fire, the scheduler rewrites `reminder` to the next occurrence and the file stays in `/reminders/` — it never moves to `past/`, so it's its own notification click target. Everything downstream (calendar next-occurrence, search reminder chips, sidebar) works unchanged.
+- [x] **`recur.ts` pure util.** `parseRepeat` (junk-tolerant — hand-edited frontmatter degrades to no-repeat), `nextOccurrence(repeat, anchor, after)` (strictly-after semantics, calendar-component math so wall-clock time survives DST, month-end + leap-year clamping, multi-period catch-up in one step), `repeatLabel`. 13 unit tests.
+- [x] **Scheduler.** Recurring branch notifies once then `advanceRecurring(entry, repeat, now)` — missed occurrences while the app was closed collapse into one catch-up notification. The in-session `fired` guard is released after the rewrite lands (else the next occurrence would never fire without a restart) and kept on failure (else a broken file notifies every minute). Notification body says "Repeats weekly" etc.
+- [x] **UI.** Repeat select (default "No repeat") right of Time in the New Reminder dialog; Rust `create_reminder` gained `repeat: Option<String>` (validated against the five values, writes `repeat` + `repeatFrom`). Sidebar shows ↻ on recurring reminders; context menu gains "Skip next occurrence" (advances past the *scheduled* time via shared `advanceRecurring`); delete dialog notes it ends the whole series.
+- [x] **Scope decisions (2026-06-10):** edits apply to the whole series — no per-occurrence exceptions (skip-next is the escape hatch); task reminders stay one-shot; missed-run catch-up = one notification. Calendar-grid expansion of future occurrences deferred (see non-goals).
 
 ## VaultEntry shape (TS side)
 
