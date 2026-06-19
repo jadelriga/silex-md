@@ -41,9 +41,7 @@
   );
 
   const items = $derived(
-    ui.paletteMode === null
-      ? []
-      : allItems.filter((i) => i.category === ui.paletteMode),
+    ui.paletteMode === null ? [] : allItems.filter((i) => i.category === ui.paletteMode),
   );
 
   const filtered = $derived(filterPaletteItems(items, query));
@@ -103,9 +101,7 @@
   };
 
   const placeholder = $derived(
-    ui.paletteMode === "navigation"
-      ? "Type a board, note, or task…"
-      : "Type a command…",
+    ui.paletteMode === "navigation" ? "Type a board, note, or task…" : "Type a command…",
   );
 
   const heading = $derived(ui.paletteMode === "navigation" ? "Open" : "Commands");
@@ -123,7 +119,9 @@
     <div
       class="w-[32rem] max-w-[90vw] rounded-lg border border-border bg-surface-1 shadow-2xl overflow-hidden"
     >
-      <div class="px-4 pt-2 pb-1 text-xs uppercase tracking-wide text-fg-subtle border-b border-border">
+      <div
+        class="px-4 pt-2 pb-1 text-xs uppercase tracking-wide text-fg-subtle border-b border-border"
+      >
         {heading}
       </div>
       <input
@@ -150,7 +148,8 @@
                   execute(item);
                 }}
                 onmouseenter={() => (selectedIndex = i)}
-                class="w-full flex items-center gap-3 px-4 py-2 text-sm text-left {i === selectedIndex
+                class="w-full flex items-center gap-3 px-4 py-2 text-sm text-left {i ===
+                selectedIndex
                   ? 'bg-surface-2 text-fg'
                   : 'text-fg hover:bg-surface-2/60'}"
               >

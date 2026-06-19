@@ -23,10 +23,10 @@ export function hasActiveFilters(f: SearchFilters | undefined): boolean {
   if (!f) return false;
   return Boolean(
     f.board ||
-      f.kind ||
-      (f.priorities && f.priorities.length > 0) ||
-      (f.tags && f.tags.length > 0) ||
-      f.reminderRange,
+    f.kind ||
+    (f.priorities && f.priorities.length > 0) ||
+    (f.tags && f.tags.length > 0) ||
+    f.reminderRange,
   );
 }
 

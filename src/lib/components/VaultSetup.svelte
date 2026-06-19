@@ -29,8 +29,8 @@
   <div class="w-[28rem] rounded-lg border border-border bg-surface-1 p-6 shadow-2xl">
     <h2 class="text-lg font-semibold text-fg">Welcome to Silex</h2>
     <p class="mt-2 text-sm leading-relaxed text-fg-muted">
-      Choose a folder to use as your vault. All your boards and notes will live there as
-      Markdown files. You can change this later from settings.
+      Choose a folder to use as your vault. All your boards and notes will live there as Markdown
+      files. You can change this later from settings.
     </p>
     <button
       onclick={chooseVault}

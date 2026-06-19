@@ -56,11 +56,28 @@ fn is_invalid_segment(name: &str) -> bool {
     let stem = upper.split('.').next().unwrap_or(&upper);
     matches!(
         stem,
-        "CON" | "PRN" | "AUX" | "NUL"
-        | "COM1" | "COM2" | "COM3" | "COM4" | "COM5"
-        | "COM6" | "COM7" | "COM8" | "COM9"
-        | "LPT1" | "LPT2" | "LPT3" | "LPT4" | "LPT5"
-        | "LPT6" | "LPT7" | "LPT8" | "LPT9"
+        "CON"
+            | "PRN"
+            | "AUX"
+            | "NUL"
+            | "COM1"
+            | "COM2"
+            | "COM3"
+            | "COM4"
+            | "COM5"
+            | "COM6"
+            | "COM7"
+            | "COM8"
+            | "COM9"
+            | "LPT1"
+            | "LPT2"
+            | "LPT3"
+            | "LPT4"
+            | "LPT5"
+            | "LPT6"
+            | "LPT7"
+            | "LPT8"
+            | "LPT9"
     )
 }
 
@@ -396,7 +413,9 @@ pub async fn create_column(
     if is_invalid_segment(trimmed_board) {
         return Err("Invalid board name".to_string());
     }
-    let board_dir = PathBuf::from(&vault_path).join("boards").join(trimmed_board);
+    let board_dir = PathBuf::from(&vault_path)
+        .join("boards")
+        .join(trimmed_board);
     if !board_dir.is_dir() {
         return Err(format!("Board not found: {}", trimmed_board));
     }
@@ -558,11 +577,7 @@ fn now_millis() -> u128 {
 }
 
 #[tauri::command]
-pub async fn move_task(
-    from: String,
-    to: String,
-    overwrite: Option<bool>,
-) -> Result<(), String> {
+pub async fn move_task(from: String, to: String, overwrite: Option<bool>) -> Result<(), String> {
     let from_p = PathBuf::from(&from);
     let to_p = PathBuf::from(&to);
 
@@ -685,8 +700,7 @@ pub async fn rename_column(
 
 #[tauri::command]
 pub async fn create_board(vault_path: String, name: String) -> Result<String, String> {
-    do_create_board(Path::new(&vault_path), &name)
-        .map(|p| p.to_string_lossy().into_owned())
+    do_create_board(Path::new(&vault_path), &name).map(|p| p.to_string_lossy().into_owned())
 }
 
 #[tauri::command]
@@ -700,8 +714,7 @@ pub async fn create_note_folder(
 
 #[tauri::command]
 pub async fn create_note(vault_path: String, relative_path: String) -> Result<String, String> {
-    do_create_note(Path::new(&vault_path), &relative_path)
-        .map(|p| p.to_string_lossy().into_owned())
+    do_create_note(Path::new(&vault_path), &relative_path).map(|p| p.to_string_lossy().into_owned())
 }
 
 fn do_create_board(vault: &Path, name: &str) -> Result<PathBuf, String> {
@@ -983,7 +996,12 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         let result = do_create_board(dir.path(), "my-board").unwrap();
         assert_eq!(result, dir.path().join("boards").join("my-board"));
-        assert!(dir.path().join("boards").join("my-board").join("backlog").is_dir());
+        assert!(dir
+            .path()
+            .join("boards")
+            .join("my-board")
+            .join("backlog")
+            .is_dir());
     }
 
     #[test]
@@ -1054,7 +1072,12 @@ mod tests {
     fn create_note_creates_intermediate_dirs() {
         let dir = tempfile::tempdir().unwrap();
         do_create_note(dir.path(), "journal/april/29").unwrap();
-        assert!(dir.path().join("journal").join("april").join("29.md").is_file());
+        assert!(dir
+            .path()
+            .join("journal")
+            .join("april")
+            .join("29.md")
+            .is_file());
     }
 
     #[test]
@@ -1082,7 +1105,11 @@ mod tests {
     fn write_then_read_board_meta_roundtrip() {
         let dir = tempfile::tempdir().unwrap();
         let original = BoardMeta {
-            columns: vec!["backlog".to_string(), "in-progress".to_string(), "done".to_string()],
+            columns: vec![
+                "backlog".to_string(),
+                "in-progress".to_string(),
+                "done".to_string(),
+            ],
         };
         write_board_meta(dir.path(), &original).unwrap();
         let loaded = read_board_meta(dir.path());

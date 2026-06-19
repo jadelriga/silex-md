@@ -18,15 +18,9 @@
  * the security boundary, so such images simply fail to load.
  */
 
-export type ResolvedImage =
-  | { kind: "remote"; src: string }
-  | { kind: "local"; fsPath: string };
+export type ResolvedImage = { kind: "remote"; src: string } | { kind: "local"; fsPath: string };
 
-export function resolveImageSrc(
-  src: string,
-  noteDir: string,
-  vaultRoot: string,
-): ResolvedImage {
+export function resolveImageSrc(src: string, noteDir: string, vaultRoot: string): ResolvedImage {
   if (/^https?:\/\//i.test(src) || /^data:/i.test(src)) {
     return { kind: "remote", src };
   }

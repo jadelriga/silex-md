@@ -66,13 +66,10 @@
 
     const idAtMount = sessionId;
 
-    unlistenOutput = await listen<{ id: string; data: string }>(
-      "shell:output",
-      (event) => {
-        if (event.payload.id !== idAtMount) return;
-        term?.write(event.payload.data);
-      },
-    );
+    unlistenOutput = await listen<{ id: string; data: string }>("shell:output", (event) => {
+      if (event.payload.id !== idAtMount) return;
+      term?.write(event.payload.data);
+    });
 
     unlistenExit = await listen<{ id: string }>("shell:exit", (event) => {
       if (event.payload.id !== idAtMount) return;

@@ -1,10 +1,5 @@
 import { describe, it, expect } from "vitest";
-import {
-  noteRelativePath,
-  noteHref,
-  decodeNoteRouteParam,
-  buildNoteTree,
-} from "./notePath";
+import { noteRelativePath, noteHref, decodeNoteRouteParam, buildNoteTree } from "./notePath";
 import type { VaultEntry } from "$lib/api/vault";
 
 function makeNote(path: string): VaultEntry {
@@ -29,9 +24,7 @@ describe("noteRelativePath", () => {
   });
 
   it("returns the path unchanged when the prefix doesn't match", () => {
-    expect(noteRelativePath("/elsewhere/foo.md", "/vault")).toBe(
-      "/elsewhere/foo.md",
-    );
+    expect(noteRelativePath("/elsewhere/foo.md", "/vault")).toBe("/elsewhere/foo.md");
   });
 });
 
@@ -62,10 +55,7 @@ describe("buildNoteTree", () => {
   });
 
   it("nests files inside folders by path", () => {
-    const tree = buildNoteTree(
-      [makeNote("/vault/journal/2026/april.md")],
-      "/vault",
-    );
+    const tree = buildNoteTree([makeNote("/vault/journal/2026/april.md")], "/vault");
     expect(tree).toEqual([
       {
         type: "folder",
@@ -92,11 +82,7 @@ describe("buildNoteTree", () => {
 
   it("places folders before files and sorts alphabetically at each level", () => {
     const tree = buildNoteTree(
-      [
-        makeNote("/vault/zeta.md"),
-        makeNote("/vault/alpha/inner.md"),
-        makeNote("/vault/beta.md"),
-      ],
+      [makeNote("/vault/zeta.md"), makeNote("/vault/alpha/inner.md"), makeNote("/vault/beta.md")],
       "/vault",
     );
     expect(tree.map((n) => `${n.type}:${n.name}`)).toEqual([
@@ -126,11 +112,7 @@ describe("buildNoteTree", () => {
   });
 
   it("merges files into existing folder nodes", () => {
-    const tree = buildNoteTree(
-      [makeNote("/vault/journal/april.md")],
-      "/vault",
-      ["journal"],
-    );
+    const tree = buildNoteTree([makeNote("/vault/journal/april.md")], "/vault", ["journal"]);
     const journal = tree.find((n) => n.type === "folder" && n.name === "journal");
     expect(journal?.type).toBe("folder");
     if (journal?.type === "folder") {

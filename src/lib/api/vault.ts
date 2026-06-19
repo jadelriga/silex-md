@@ -87,11 +87,7 @@ export const vaultApi = {
   createColumn(vaultPath: string, boardName: string, columnName: string): Promise<void> {
     return invoke("create_column", { vaultPath, boardName, columnName });
   },
-  setBoardColumnOrder(
-    vaultPath: string,
-    boardName: string,
-    columns: string[],
-  ): Promise<void> {
+  setBoardColumnOrder(vaultPath: string, boardName: string, columns: string[]): Promise<void> {
     return invoke("set_board_column_order", { vaultPath, boardName, columns });
   },
   createReminder(vaultPath: string, title: string, reminder: string): Promise<string> {

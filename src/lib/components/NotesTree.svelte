@@ -1,7 +1,12 @@
 <script lang="ts">
   import { page } from "$app/state";
   import { goto } from "$app/navigation";
-  import { noteHref, noteRelativePath, decodeNoteRouteParam, type NoteTreeNode } from "$lib/utils/notePath";
+  import {
+    noteHref,
+    noteRelativePath,
+    decodeNoteRouteParam,
+    type NoteTreeNode,
+  } from "$lib/utils/notePath";
   import { ui } from "$lib/stores/ui.svelte";
   import { vault } from "$lib/stores/vault.svelte";
   import { notes } from "$lib/stores/notes.svelte";
@@ -211,45 +216,45 @@
         />
       </div>
     {:else}
-    <button
-      type="button"
-      onclick={() => toggle(node.relativePath)}
-      ondragover={(e) => onFolderDragOver(e, node.relativePath)}
-      ondragleave={() => onFolderDragLeave(node.relativePath)}
-      ondrop={(e) => onFolderDrop(e, node.relativePath)}
-      use:withContextMenu={() => [
-        {
-          label: "Rename…",
-          action: () => {
-            renamingPath = node.relativePath;
+      <button
+        type="button"
+        onclick={() => toggle(node.relativePath)}
+        ondragover={(e) => onFolderDragOver(e, node.relativePath)}
+        ondragleave={() => onFolderDragLeave(node.relativePath)}
+        ondrop={(e) => onFolderDrop(e, node.relativePath)}
+        use:withContextMenu={() => [
+          {
+            label: "Rename…",
+            action: () => {
+              renamingPath = node.relativePath;
+            },
           },
-        },
-        { label: "Delete folder…", danger: true, action: () => deleteNoteFolder(node) },
-      ]}
-      class="w-full text-left px-2 py-0.5 rounded text-fg-muted hover:bg-surface-2/60 truncate flex items-center gap-1 {ui.notesDragOver ===
-      node.relativePath
-        ? 'bg-surface-2 ring-1 ring-fg-faint'
-        : ''}"
-      style="padding-left: {0.5 + depth * 0.75}rem"
-    >
-      <svg
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        stroke-width="2.5"
-        stroke-linecap="round"
-        stroke-linejoin="round"
-        aria-hidden="true"
-        class="w-4 h-4 shrink-0 text-fg-muted transition-transform {expanded.has(
-          node.relativePath,
-        )
-          ? 'rotate-90'
+          { label: "Delete folder…", danger: true, action: () => deleteNoteFolder(node) },
+        ]}
+        class="w-full text-left px-2 py-0.5 rounded text-fg-muted hover:bg-surface-2/60 truncate flex items-center gap-1 {ui.notesDragOver ===
+        node.relativePath
+          ? 'bg-surface-2 ring-1 ring-fg-faint'
           : ''}"
+        style="padding-left: {0.5 + depth * 0.75}rem"
       >
-        <path d="M9 6 L15 12 L9 18" />
-      </svg>
-      <span class="truncate">{node.name}</span>
-    </button>
+        <svg
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2.5"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          aria-hidden="true"
+          class="w-4 h-4 shrink-0 text-fg-muted transition-transform {expanded.has(
+            node.relativePath,
+          )
+            ? 'rotate-90'
+            : ''}"
+        >
+          <path d="M9 6 L15 12 L9 18" />
+        </svg>
+        <span class="truncate">{node.name}</span>
+      </button>
     {/if}
     {#if expanded.has(node.relativePath)}
       <Self nodes={node.children} bind:expanded depth={depth + 1} />

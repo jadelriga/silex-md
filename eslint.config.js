@@ -47,12 +47,6 @@ export default ts.config(
     },
   },
   {
-    ignores: [
-      "build/",
-      ".svelte-kit/",
-      "src-tauri/",
-      "static/",
-      "src/lib/bindings.ts",
-    ],
+    ignores: ["build/", ".svelte-kit/", "src-tauri/", "static/", "src/lib/bindings.ts"],
   },
 );

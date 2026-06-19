@@ -75,7 +75,7 @@
             ? 'bg-red-500 text-white hover:bg-red-600'
             : 'bg-accent text-accent-fg hover:bg-accent-hover'} disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          {busy ? "Working…" : r.confirmLabel ?? "Confirm"}
+          {busy ? "Working…" : (r.confirmLabel ?? "Confirm")}
         </button>
       </div>
     </div>

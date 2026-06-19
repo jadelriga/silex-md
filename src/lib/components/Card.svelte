@@ -8,9 +8,7 @@
   let { entry }: { entry: VaultEntry } = $props();
 
   const fm = $derived((entry.frontmatter ?? {}) as Record<string, unknown>);
-  const fileName = $derived(
-    entry.path.split("/").pop()?.replace(/\.md$/, "") ?? "",
-  );
+  const fileName = $derived(entry.path.split("/").pop()?.replace(/\.md$/, "") ?? "");
   const title = $derived((fm.title as string | undefined) ?? fileName);
   const priority = $derived(fm.priority as string | undefined);
   const tags = $derived((fm.tags as string[] | undefined) ?? []);
@@ -49,9 +47,7 @@
   data-card
   onclick={open}
   onkeydown={onKey}
-  use:withContextMenu={() => [
-    { label: "Delete card…", danger: true, action: deleteCard },
-  ]}
+  use:withContextMenu={() => [{ label: "Delete card…", danger: true, action: deleteCard }]}
   class="rounded border border-border bg-surface-2 p-3 text-sm hover:border-border-strong cursor-grab active:cursor-grabbing select-none focus:outline-none focus:ring-1 focus:ring-fg-faint"
 >
   <div class="font-medium text-fg break-words">{title}</div>

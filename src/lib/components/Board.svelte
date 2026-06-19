@@ -238,7 +238,9 @@
   <div
     ondragover={onTrailingDragOver}
     ondrop={onTrailingDrop}
-    class="w-72 shrink-0 flex flex-col {draggingColumn ? 'rounded-md outline-dashed outline-1 outline-fg-faint/30' : ''}"
+    class="w-72 shrink-0 flex flex-col {draggingColumn
+      ? 'rounded-md outline-dashed outline-1 outline-fg-faint/30'
+      : ''}"
   >
     {#if addingColumn}
       <CreateInput

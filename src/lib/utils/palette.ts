@@ -203,11 +203,7 @@ export function buildPaletteItems(s: PaletteSources): PaletteItem[] {
   return items;
 }
 
-export function filterPaletteItems(
-  items: PaletteItem[],
-  query: string,
-  limit = 30,
-): PaletteItem[] {
+export function filterPaletteItems(items: PaletteItem[], query: string, limit = 30): PaletteItem[] {
   const q = query.trim().toLowerCase();
   if (!q) return items.slice(0, limit);
   const tokens = q.split(/\s+/).filter(Boolean);

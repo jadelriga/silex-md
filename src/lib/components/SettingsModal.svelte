@@ -66,7 +66,13 @@
           aria-label="Close settings"
           class="text-fg-muted hover:text-fg"
         >
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-5 h-5">
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            class="w-5 h-5"
+          >
             <path d="M6 6 L18 18 M18 6 L6 18" stroke-linecap="round" />
           </svg>
         </button>
@@ -97,8 +103,8 @@
         <section>
           <h3 class="text-xs uppercase tracking-wide text-fg-subtle mb-2">Settings file</h3>
           <p class="text-sm text-fg-muted leading-relaxed">
-            Settings are stored as JSON in the app data directory. You can hand-edit the file
-            if you want — Silex will pick up the changes the next time it loads.
+            Settings are stored as JSON in the app data directory. You can hand-edit the file if you
+            want — Silex will pick up the changes the next time it loads.
           </p>
           <button
             type="button"

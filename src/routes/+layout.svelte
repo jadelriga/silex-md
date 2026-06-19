@@ -63,10 +63,7 @@
     let lastWidth = startWidth;
     const onMove = (ev: MouseEvent) => {
       const delta = startX - ev.clientX;
-      lastWidth = Math.max(
-        320,
-        Math.min(window.innerWidth - 240, startWidth + delta),
-      );
+      lastWidth = Math.max(320, Math.min(window.innerWidth - 240, startWidth + delta));
       settings.taskPanelWidth = lastWidth;
     };
     const onUp = () => {
@@ -228,12 +225,7 @@
 
   $effect(() => {
     const handler = (e: KeyboardEvent) => {
-      if (
-        e.key === "Escape" &&
-        ui.openTaskPath &&
-        ui.paletteMode === null &&
-        !ui.searchOpen
-      ) {
+      if (e.key === "Escape" && ui.openTaskPath && ui.paletteMode === null && !ui.searchOpen) {
         ui.openTaskPath = null;
       }
     };
@@ -352,10 +344,7 @@
     data-tauri-drag-region
   >
     <div class="w-20 shrink-0" data-tauri-drag-region></div>
-    <div
-      class="flex-1 px-3 text-xs text-fg-subtle truncate"
-      data-tauri-drag-region
-    >
+    <div class="flex-1 px-3 text-xs text-fg-subtle truncate" data-tauri-drag-region>
       Silex{vault.path ? ` — ${basename(vault.path)}` : ""}
     </div>
   </div>
@@ -366,8 +355,8 @@
         <a
           href="/"
           class="block text-sm font-semibold tracking-wide text-fg hover:text-fg-muted"
-          title="Home"
-        >Silex</a>
+          title="Home">Silex</a
+        >
         {#if vault.path}
           <p class="mt-0.5 text-xs text-fg-subtle truncate" title={vault.path}>
             {basename(vault.path)}
@@ -396,7 +385,13 @@
                 aria-label="New board"
                 class="opacity-0 group-hover:opacity-100 transition-opacity text-fg-subtle hover:text-fg"
               >
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4">
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  class="w-4 h-4"
+                >
                   <path d="M12 5v14M5 12h14" stroke-linecap="round" />
                 </svg>
               </button>
@@ -460,7 +455,13 @@
                 aria-label="New reminder"
                 class="opacity-0 group-hover:opacity-100 transition-opacity text-fg-subtle hover:text-fg"
               >
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4">
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  class="w-4 h-4"
+                >
                   <path d="M12 5v14M5 12h14" stroke-linecap="round" />
                 </svg>
               </button>
@@ -483,14 +484,22 @@
           <div class="group px-2 py-1 flex items-center justify-between shrink-0">
             <span class="text-xs uppercase tracking-wide text-fg-subtle">Notes</span>
             {#if vault.path}
-              <div class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+              <div
+                class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity"
+              >
                 <button
                   onclick={() => (ui.creating = "folder")}
                   title="New folder"
                   aria-label="New folder"
                   class="text-fg-subtle hover:text-fg"
                 >
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4">
+                  <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    class="w-4 h-4"
+                  >
                     <path
                       d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7z"
                       stroke-linejoin="round"
@@ -504,7 +513,13 @@
                   aria-label="New note"
                   class="text-fg-subtle hover:text-fg"
                 >
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4">
+                  <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    class="w-4 h-4"
+                  >
                     <path
                       d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8l-5-5z"
                       stroke-linejoin="round"
@@ -532,7 +547,9 @@
           <div
             ondragover={onNotesRootDragOver}
             ondrop={onNotesRootDrop}
-            class="flex-1 min-h-[2rem] {ui.notesDrag ? 'rounded outline-dashed outline-1 outline-fg-faint/30' : ''}"
+            class="flex-1 min-h-[2rem] {ui.notesDrag
+              ? 'rounded outline-dashed outline-1 outline-fg-faint/30'
+              : ''}"
           >
             {#if !vault.path}
               <div class="px-2 py-1 text-fg-faint italic">No vault loaded</div>
@@ -571,7 +588,9 @@
             onmousedown={startTerminalResize}
             class="h-1 -mt-0.5 cursor-ns-resize hover:bg-surface-3 shrink-0"
           ></div>
-          <div class="flex items-center justify-between px-3 py-1 border-b border-border text-xs text-fg-subtle">
+          <div
+            class="flex items-center justify-between px-3 py-1 border-b border-border text-xs text-fg-subtle"
+          >
             <span>Terminal</span>
             <button
               onclick={() => (ui.terminalOpen = false)}

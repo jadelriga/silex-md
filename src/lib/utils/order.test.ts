@@ -34,29 +34,13 @@ describe("compareOrder", () => {
 
 describe("sortCards", () => {
   it("orders by frontmatter.order then by path", () => {
-    const cards = [
-      entry("/c.md", "a2"),
-      entry("/a.md", "a0"),
-      entry("/b.md", "a1"),
-    ];
-    expect(sortCards(cards).map((c) => c.path)).toEqual([
-      "/a.md",
-      "/b.md",
-      "/c.md",
-    ]);
+    const cards = [entry("/c.md", "a2"), entry("/a.md", "a0"), entry("/b.md", "a1")];
+    expect(sortCards(cards).map((c) => c.path)).toEqual(["/a.md", "/b.md", "/c.md"]);
   });
 
   it("places cards without order after ordered ones, sorted by path", () => {
-    const cards = [
-      entry("/a.md", null),
-      entry("/b.md", "a0"),
-      entry("/c.md", null),
-    ];
-    expect(sortCards(cards).map((c) => c.path)).toEqual([
-      "/b.md",
-      "/a.md",
-      "/c.md",
-    ]);
+    const cards = [entry("/a.md", null), entry("/b.md", "a0"), entry("/c.md", null)];
+    expect(sortCards(cards).map((c) => c.path)).toEqual(["/b.md", "/a.md", "/c.md"]);
   });
 });
 

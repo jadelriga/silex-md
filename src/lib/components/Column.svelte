@@ -147,10 +147,7 @@
     use:dndzone={{ items, type: "card", flipDurationMs: 150, dropTargetStyle: {} }}
     onconsider={(e) => onConsider(e.detail.items as CardItem[])}
     onfinalize={(e) =>
-      onFinalize(
-        e.detail.items as CardItem[],
-        e.detail.info as { id: string; trigger?: string },
-      )}
+      onFinalize(e.detail.items as CardItem[], e.detail.info as { id: string; trigger?: string })}
   >
     {#each items as item (item.id)}
       <Card entry={item} />
@@ -180,7 +177,13 @@
           onclick={startAdding}
           class="w-full px-2 py-1.5 rounded text-sm text-fg-subtle hover:bg-surface-2/60 hover:text-fg text-left flex items-center gap-1.5"
         >
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-3.5 h-3.5">
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            class="w-3.5 h-3.5"
+          >
             <path d="M12 5v14M5 12h14" stroke-linecap="round" />
           </svg>
           <span>Add a card</span>
