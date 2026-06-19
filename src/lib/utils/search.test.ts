@@ -144,9 +144,7 @@ describe("highlightMatches", () => {
     );
   });
   it("escapes regex special characters in tokens", () => {
-    expect(highlightMatches("a.b a+b", ["a.b"])).toBe(
-      `<mark class="search-hit">a.b</mark> a+b`,
-    );
+    expect(highlightMatches("a.b a+b", ["a.b"])).toBe(`<mark class="search-hit">a.b</mark> a+b`);
   });
   it("escapes HTML in surrounding text and matched substring", () => {
     expect(highlightMatches("<script>foo", ["foo"])).toBe(

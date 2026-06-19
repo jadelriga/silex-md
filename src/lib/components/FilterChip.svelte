@@ -32,9 +32,7 @@
     onOpenChange(!open);
   }
 
-  const isActive = $derived(
-    multi ? Array.isArray(value) && value.length > 0 : Boolean(value),
-  );
+  const isActive = $derived(multi ? Array.isArray(value) && value.length > 0 : Boolean(value));
 
   const display = $derived.by(() => {
     if (!isActive) return null;

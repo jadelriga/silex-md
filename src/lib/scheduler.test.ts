@@ -70,9 +70,7 @@ describe("remindersDueAtOrBefore", () => {
   });
 
   it("excludes entries with no reminder", () => {
-    expect(
-      remindersDueAtOrBefore([task({ path: "/x.md" })], now, new Set()),
-    ).toEqual([]);
+    expect(remindersDueAtOrBefore([task({ path: "/x.md" })], now, new Set())).toEqual([]);
   });
 
   it("returns multiple matches in one pass", () => {

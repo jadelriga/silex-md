@@ -8,13 +8,12 @@
  */
 
 export const isMac =
-  typeof navigator !== "undefined" &&
-  /Mac|iPhone|iPad|iPod/.test(navigator.platform);
+  typeof navigator !== "undefined" && /Mac|iPhone|iPad|iPod/.test(navigator.platform);
 
 export interface ShortcutParts {
-  mod?: boolean;   // Cmd on macOS, Ctrl elsewhere
+  mod?: boolean; // Cmd on macOS, Ctrl elsewhere
   shift?: boolean;
-  alt?: boolean;   // Option on macOS
+  alt?: boolean; // Option on macOS
   key: string;
 }
 

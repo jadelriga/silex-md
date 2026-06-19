@@ -39,23 +39,17 @@
   const allTags = $derived.by(() => {
     const set = new Set<string>();
     for (const e of allEntries) {
-      const tags = ((e.frontmatter ?? {}) as Record<string, unknown>).tags as
-        | string[]
-        | undefined;
+      const tags = ((e.frontmatter ?? {}) as Record<string, unknown>).tags as string[] | undefined;
       if (tags) for (const t of tags) if (typeof t === "string") set.add(t);
     }
     return Array.from(set).sort();
   });
 
-  const hits = $derived<SearchHit[]>(
-    searchEntries(allEntries, bodies.cache, query, filters),
-  );
+  const hits = $derived<SearchHit[]>(searchEntries(allEntries, bodies.cache, query, filters));
 
   const tokens = $derived(queryTokens(query));
 
-  const boardOptions = $derived(
-    boards.list.map((b) => ({ value: b.name, label: b.name })),
-  );
+  const boardOptions = $derived(boards.list.map((b) => ({ value: b.name, label: b.name })));
   const tagOptions = $derived(allTags.map((t) => ({ value: t, label: t })));
   const kindOptions = [
     { value: "task", label: "Task" },
@@ -138,9 +132,7 @@
       if (e.target === e.currentTarget) close();
     }}
   >
-    <div
-      class="w-[48rem] max-w-[92vw] rounded-lg border border-border bg-surface-1 shadow-2xl"
-    >
+    <div class="w-[48rem] max-w-[92vw] rounded-lg border border-border bg-surface-1 shadow-2xl">
       <input
         bind:this={inputEl}
         bind:value={query}
@@ -167,8 +159,7 @@
           value={filters.kind}
           open={openChipId === "kind"}
           onOpenChange={chipToggler("kind")}
-          onChange={(v) =>
-            (filters = { ...filters, kind: v as "task" | "note" | undefined })}
+          onChange={(v) => (filters = { ...filters, kind: v as "task" | "note" | undefined })}
         />
         <FilterChip
           label="Priority"
@@ -177,8 +168,7 @@
           value={filters.priorities}
           open={openChipId === "priority"}
           onOpenChange={chipToggler("priority")}
-          onChange={(v) =>
-            (filters = { ...filters, priorities: v as Priority[] | undefined })}
+          onChange={(v) => (filters = { ...filters, priorities: v as Priority[] | undefined })}
         />
         <FilterChip
           label="Tags"
@@ -230,7 +220,9 @@
                     : 'hover:bg-surface-2/60'}"
                 >
                   <div class="flex items-center gap-3 text-sm">
-                    <span class="text-xs uppercase tracking-wide w-12 shrink-0 {kindColor[hit.kind]}">
+                    <span
+                      class="text-xs uppercase tracking-wide w-12 shrink-0 {kindColor[hit.kind]}"
+                    >
                       {hit.kind}
                     </span>
                     <span class="flex-1 truncate text-fg"

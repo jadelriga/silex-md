@@ -1,6 +1,6 @@
-use tauri::menu::{Menu, MenuBuilder, MenuItemBuilder, SubmenuBuilder};
 #[cfg(target_os = "macos")]
 use tauri::menu::{AboutMetadataBuilder, PredefinedMenuItem};
+use tauri::menu::{Menu, MenuBuilder, MenuItemBuilder, SubmenuBuilder};
 use tauri::{AppHandle, Emitter, Wry};
 
 pub fn build_menu(app: &AppHandle) -> tauri::Result<Menu<Wry>> {
@@ -127,13 +127,7 @@ pub fn build_menu(app: &AppHandle) -> tauri::Result<Menu<Wry>> {
     #[cfg(target_os = "macos")]
     {
         MenuBuilder::new(app)
-            .items(&[
-                &app_menu,
-                &file_menu,
-                &edit_menu,
-                &view_menu,
-                &window_menu,
-            ])
+            .items(&[&app_menu, &file_menu, &edit_menu, &view_menu, &window_menu])
             .build()
     }
     #[cfg(not(target_os = "macos"))]

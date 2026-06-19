@@ -29,12 +29,18 @@
 
   function mimeToExt(mime: string): string {
     switch (mime) {
-      case "image/png": return "png";
-      case "image/jpeg": return "jpg";
-      case "image/gif": return "gif";
-      case "image/webp": return "webp";
-      case "image/svg+xml": return "svg";
-      default: return "png";
+      case "image/png":
+        return "png";
+      case "image/jpeg":
+        return "jpg";
+      case "image/gif":
+        return "gif";
+      case "image/webp":
+        return "webp";
+      case "image/svg+xml":
+        return "svg";
+      default:
+        return "png";
     }
   }
 

@@ -23,11 +23,7 @@ class ThemeStore {
   systemPrefersDark = $state(true);
 
   effective = $derived<ThemeEffective>(
-    this.pref === "system"
-      ? this.systemPrefersDark
-        ? "dark"
-        : "light"
-      : this.pref,
+    this.pref === "system" ? (this.systemPrefersDark ? "dark" : "light") : this.pref,
   );
 
   async load() {

@@ -40,11 +40,29 @@ export const darkHighlight = HighlightStyle.define([
   { tag: t.tagName, color: "#f7768e" },
 
   // Comments
-  { tag: [t.comment, t.lineComment, t.blockComment, t.docComment], color: "#7d8aa6", fontStyle: "italic" },
+  {
+    tag: [t.comment, t.lineComment, t.blockComment, t.docComment],
+    color: "#7d8aa6",
+    fontStyle: "italic",
+  },
 
   // Operators and punctuation — readable, not loud
-  { tag: [t.operator, t.derefOperator, t.compareOperator, t.arithmeticOperator, t.logicOperator, t.bitwiseOperator, t.updateOperator], color: "#89ddff" },
-  { tag: [t.punctuation, t.bracket, t.angleBracket, t.brace, t.paren, t.squareBracket], color: "#a9b1d6" },
+  {
+    tag: [
+      t.operator,
+      t.derefOperator,
+      t.compareOperator,
+      t.arithmeticOperator,
+      t.logicOperator,
+      t.bitwiseOperator,
+      t.updateOperator,
+    ],
+    color: "#89ddff",
+  },
+  {
+    tag: [t.punctuation, t.bracket, t.angleBracket, t.brace, t.paren, t.squareBracket],
+    color: "#a9b1d6",
+  },
   { tag: t.separator, color: "#c0caf5" },
 
   // Markdown-ish (only relevant if md is parsed inside fenced ```md)
@@ -76,10 +94,28 @@ export const lightHighlight = HighlightStyle.define([
   { tag: [t.typeName, t.className, t.namespace], color: "#179299" },
   { tag: t.tagName, color: "#d20f39" },
 
-  { tag: [t.comment, t.lineComment, t.blockComment, t.docComment], color: "#8c8fa1", fontStyle: "italic" },
+  {
+    tag: [t.comment, t.lineComment, t.blockComment, t.docComment],
+    color: "#8c8fa1",
+    fontStyle: "italic",
+  },
 
-  { tag: [t.operator, t.derefOperator, t.compareOperator, t.arithmeticOperator, t.logicOperator, t.bitwiseOperator, t.updateOperator], color: "#04a5e5" },
-  { tag: [t.punctuation, t.bracket, t.angleBracket, t.brace, t.paren, t.squareBracket], color: "#6c6f85" },
+  {
+    tag: [
+      t.operator,
+      t.derefOperator,
+      t.compareOperator,
+      t.arithmeticOperator,
+      t.logicOperator,
+      t.bitwiseOperator,
+      t.updateOperator,
+    ],
+    color: "#04a5e5",
+  },
+  {
+    tag: [t.punctuation, t.bracket, t.angleBracket, t.brace, t.paren, t.squareBracket],
+    color: "#6c6f85",
+  },
   { tag: t.separator, color: "#4c4f69" },
 
   { tag: [t.heading, t.strong], color: "#8839ef", fontWeight: "700" },

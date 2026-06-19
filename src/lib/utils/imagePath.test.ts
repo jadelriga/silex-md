@@ -14,9 +14,10 @@ describe("resolveImageSrc", () => {
       kind: "remote",
       src: "HTTPS://x.test/y.png",
     });
-    expect(
-      resolveImageSrc("data:image/png;base64,iVBOR=", noteDir, vaultRoot),
-    ).toEqual({ kind: "remote", src: "data:image/png;base64,iVBOR=" });
+    expect(resolveImageSrc("data:image/png;base64,iVBOR=", noteDir, vaultRoot)).toEqual({
+      kind: "remote",
+      src: "data:image/png;base64,iVBOR=",
+    });
   });
 
   it("resolves relative paths against the note directory", () => {
@@ -78,9 +79,10 @@ describe("resolveImageSrc", () => {
       kind: "local",
       fsPath: "C:\\vault\\notes\\pics\\a.png",
     });
-    expect(
-      resolveImageSrc("/attachments/x.png", "C:\\vault\\notes", "C:\\vault"),
-    ).toEqual({ kind: "local", fsPath: "C:\\vault\\attachments\\x.png" });
+    expect(resolveImageSrc("/attachments/x.png", "C:\\vault\\notes", "C:\\vault")).toEqual({
+      kind: "local",
+      fsPath: "C:\\vault\\attachments\\x.png",
+    });
   });
 
   it("does not throw on malformed percent-encoding", () => {

@@ -42,8 +42,7 @@ export interface ImageContext {
  * never cache the result in the plugin constructor.
  */
 export const imageContext = Facet.define<() => ImageContext, () => ImageContext>({
-  combine: (values) =>
-    values[values.length - 1] ?? (() => ({ notePath: "", vaultRoot: "" })),
+  combine: (values) => values[values.length - 1] ?? (() => ({ notePath: "", vaultRoot: "" })),
 });
 
 class CheckboxWidget extends WidgetType {
@@ -56,11 +55,7 @@ class CheckboxWidget extends WidgetType {
   }
 
   eq(other: CheckboxWidget): boolean {
-    return (
-      other.checked === this.checked &&
-      other.from === this.from &&
-      other.to === this.to
-    );
+    return other.checked === this.checked && other.from === this.from && other.to === this.to;
   }
 
   toDOM(view: EditorView): HTMLElement {
@@ -160,21 +155,15 @@ function buildDecorations(view: EditorView): DecorationSet {
           case "ATXHeading6": {
             const level = parseInt(node.name.slice("ATXHeading".length), 10);
             decos.push(
-              Decoration.mark({ class: `cm-md-heading cm-md-h${level}` }).range(
-                node.from,
-                node.to,
-              ),
+              Decoration.mark({ class: `cm-md-heading cm-md-h${level}` }).range(node.from, node.to),
             );
             if (!cursorNear) {
               const child = node.node.getChild("HeaderMark");
               if (child) {
                 // Also swallow the space after the marker so the rendered text
                 // doesn't carry leading whitespace.
-                const eatSpace =
-                  view.state.doc.sliceString(child.to, child.to + 1) === " " ? 1 : 0;
-                decos.push(
-                  Decoration.replace({}).range(child.from, child.to + eatSpace),
-                );
+                const eatSpace = view.state.doc.sliceString(child.to, child.to + 1) === " " ? 1 : 0;
+                decos.push(Decoration.replace({}).range(child.from, child.to + eatSpace));
               }
             }
             break;
@@ -193,9 +182,7 @@ function buildDecorations(view: EditorView): DecorationSet {
           }
 
           case "InlineCode": {
-            decos.push(
-              Decoration.mark({ class: "cm-md-inline-code" }).range(node.from, node.to),
-            );
+            decos.push(Decoration.mark({ class: "cm-md-inline-code" }).range(node.from, node.to));
             if (!cursorNear) {
               for (const mark of node.node.getChildren("CodeMark")) {
                 decos.push(Decoration.replace({}).range(mark.from, mark.to));
@@ -212,10 +199,7 @@ function buildDecorations(view: EditorView): DecorationSet {
               // Reveal: dim the URL portion so it's distinguishable but readable.
               if (urlNode) {
                 decos.push(
-                  Decoration.mark({ class: "cm-md-link-url" }).range(
-                    urlNode.from,
-                    urlNode.to,
-                  ),
+                  Decoration.mark({ class: "cm-md-link-url" }).range(urlNode.from, urlNode.to),
                 );
               }
             } else if (marks.length >= 4) {
@@ -228,9 +212,7 @@ function buildDecorations(view: EditorView): DecorationSet {
               const textFrom = marks[0].to;
               const textTo = marks[1].from;
               if (textFrom < textTo) {
-                decos.push(
-                  Decoration.mark({ class: "cm-md-link" }).range(textFrom, textTo),
-                );
+                decos.push(Decoration.mark({ class: "cm-md-link" }).range(textFrom, textTo));
               }
             }
             break;
@@ -279,9 +261,7 @@ function buildDecorations(view: EditorView): DecorationSet {
 
           case "ListMark": {
             // The `-`, `*`, `+`, or `1.` marker. Just dim it; don't replace.
-            decos.push(
-              Decoration.mark({ class: "cm-md-list-mark" }).range(node.from, node.to),
-            );
+            decos.push(Decoration.mark({ class: "cm-md-list-mark" }).range(node.from, node.to));
             break;
           }
 
@@ -289,16 +269,12 @@ function buildDecorations(view: EditorView): DecorationSet {
             // Mark the whole node so we can give it a left border + indent
             // via CSS. The `>` markers stay visible (we style them subtly
             // through the QuoteMark case below).
-            decos.push(
-              Decoration.mark({ class: "cm-md-blockquote" }).range(node.from, node.to),
-            );
+            decos.push(Decoration.mark({ class: "cm-md-blockquote" }).range(node.from, node.to));
             break;
           }
 
           case "QuoteMark": {
-            decos.push(
-              Decoration.mark({ class: "cm-md-quote-mark" }).range(node.from, node.to),
-            );
+            decos.push(Decoration.mark({ class: "cm-md-quote-mark" }).range(node.from, node.to));
             break;
           }
 
@@ -314,15 +290,11 @@ function buildDecorations(view: EditorView): DecorationSet {
 
             if (!cursorNear) {
               decos.push(
-                Decoration.line({ class: "cm-md-fenced-hide" }).range(
-                  doc.line(startLine).from,
-                ),
+                Decoration.line({ class: "cm-md-fenced-hide" }).range(doc.line(startLine).from),
               );
               if (endLine !== startLine) {
                 decos.push(
-                  Decoration.line({ class: "cm-md-fenced-hide" }).range(
-                    doc.line(endLine).from,
-                  ),
+                  Decoration.line({ class: "cm-md-fenced-hide" }).range(doc.line(endLine).from),
                 );
               }
             }
@@ -334,9 +306,7 @@ function buildDecorations(view: EditorView): DecorationSet {
               const classes = ["cm-md-fenced-line"];
               if (n === visibleStart) classes.push("cm-md-fenced-first");
               if (n === visibleEnd) classes.push("cm-md-fenced-last");
-              decos.push(
-                Decoration.line({ class: classes.join(" ") }).range(line.from),
-              );
+              decos.push(Decoration.line({ class: classes.join(" ") }).range(line.from));
             }
             break;
           }
@@ -345,9 +315,7 @@ function buildDecorations(view: EditorView): DecorationSet {
             // Language tag after the opening ``` (e.g. `python`). oneDark
             // tints this a dark blue that's nearly invisible on our
             // surface-2 code-block background; mark with our own class.
-            decos.push(
-              Decoration.mark({ class: "cm-md-code-info" }).range(node.from, node.to),
-            );
+            decos.push(Decoration.mark({ class: "cm-md-code-info" }).range(node.from, node.to));
             break;
           }
         }

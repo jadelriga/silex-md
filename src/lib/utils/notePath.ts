@@ -2,9 +2,7 @@ import type { VaultEntry } from "$lib/api/vault";
 
 export function noteRelativePath(absolutePath: string, vaultPath: string): string {
   const prefix = vaultPath.endsWith("/") ? vaultPath : vaultPath + "/";
-  return absolutePath.startsWith(prefix)
-    ? absolutePath.slice(prefix.length)
-    : absolutePath;
+  return absolutePath.startsWith(prefix) ? absolutePath.slice(prefix.length) : absolutePath;
 }
 
 export function noteHref(relativePath: string): string {
@@ -41,11 +39,7 @@ export function buildNoteTree(
   return root;
 }
 
-function ensureFolder(
-  tree: NoteTreeNode[],
-  segments: string[],
-  prefix: string[],
-): void {
+function ensureFolder(tree: NoteTreeNode[], segments: string[], prefix: string[]): void {
   if (segments.length === 0) return;
   const [head, ...rest] = segments;
   let folder = tree.find((n) => n.type === "folder" && n.name === head);

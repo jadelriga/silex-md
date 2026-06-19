@@ -48,15 +48,11 @@
   const all = $derived(Array.from(reminders.entries.values()));
 
   const active = $derived(
-    all
-      .filter((e) => !isPast(e))
-      .sort((a, b) => reminderTime(a).localeCompare(reminderTime(b))),
+    all.filter((e) => !isPast(e)).sort((a, b) => reminderTime(a).localeCompare(reminderTime(b))),
   );
 
   const past = $derived(
-    all
-      .filter((e) => isPast(e))
-      .sort((a, b) => reminderTime(b).localeCompare(reminderTime(a))),
+    all.filter((e) => isPast(e)).sort((a, b) => reminderTime(b).localeCompare(reminderTime(a))),
   );
 
   function relPath(e: VaultEntry): string {
