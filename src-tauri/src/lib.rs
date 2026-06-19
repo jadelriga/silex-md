@@ -1,6 +1,9 @@
 mod commands;
+mod error;
 mod menu;
+mod models;
 mod pty;
+mod util;
 
 use commands::{
     create_board, create_column, create_note, create_note_folder, create_reminder, create_task,
