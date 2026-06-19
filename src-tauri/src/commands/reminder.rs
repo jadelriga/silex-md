@@ -8,6 +8,7 @@ use crate::error::{Error, Result};
 use crate::util::{slugify, unique_path, yaml_dq};
 
 #[tauri::command]
+#[specta::specta]
 pub async fn create_reminder(
     vault_path: String,
     title: String,

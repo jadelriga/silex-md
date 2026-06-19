@@ -66,3 +66,63 @@ pub fn run() {
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
+
+// Single source of truth for the generated binding surface. Only the export
+// test below uses it: the runtime handler in `run()` stays a plain
+// `generate_handler!`. `save_attachment` (raw IPC body) and the pty commands are
+// intentionally excluded from the typed surface.
+//
+// This lives at the crate root — not in a submodule — on purpose: the
+// `#[specta::specta]` companion macros that `collect_commands!` expands to are
+// `#[macro_export]`ed (crate root) and invoked unqualified, so they only resolve
+// where the command idents are already in scope (the top-of-file `use
+// commands::{...}`), i.e. here.
+#[cfg(test)]
+fn specta_builder() -> tauri_specta::Builder<tauri::Wry> {
+    tauri_specta::Builder::<tauri::Wry>::new()
+        // Generated commands reject (throw) on error rather than returning a
+        // Result envelope, so the frontend keeps its existing catch-based
+        // contract (incl. the "DestinationExists:" prefix match).
+        .error_handling(tauri_specta::ErrorHandlingMode::Throw)
+        .commands(tauri_specta::collect_commands![
+            read_vault,
+            read_entry,
+            read_task_body,
+            read_bodies,
+            create_task,
+            write_task,
+            move_task,
+            delete_task,
+            delete_path,
+            list_boards,
+            create_board,
+            create_column,
+            delete_column,
+            rename_column,
+            set_board_column_order,
+            create_note,
+            create_note_folder,
+            list_note_folders,
+            create_reminder,
+            watch_vault,
+        ])
+        .events(tauri_specta::collect_events![models::VaultChange])
+}
+
+// Regenerates src/lib/bindings.ts from the Rust types. CI runs this via
+// `cargo test` and then `git diff --exit-code src/lib/bindings.ts` to fail if
+// the committed bindings have drifted from the Rust source.
+#[cfg(test)]
+#[test]
+fn bindings_are_up_to_date() {
+    specta_builder()
+        .export(
+            // usize (subtask counts) -> TS `number`; the values are tiny, so the
+            // BigInt-truncation caveat doesn't apply. Matches the old hand-written
+            // `subtaskTotal: number`.
+            specta_typescript::Typescript::default()
+                .bigint(specta_typescript::BigIntExportBehavior::Number),
+            concat!(env!("CARGO_MANIFEST_DIR"), "/../src/lib/bindings.ts"),
+        )
+        .expect("failed to export TypeScript bindings");
+}

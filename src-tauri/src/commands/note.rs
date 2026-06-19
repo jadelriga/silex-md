@@ -11,6 +11,7 @@ use crate::error::{Error, Result};
 use crate::util::is_invalid_segment;
 
 #[tauri::command]
+#[specta::specta]
 pub async fn list_note_folders(vault_path: String) -> Result<Vec<String>> {
     let vault = PathBuf::from(&vault_path);
     if !vault.is_dir() {
@@ -55,12 +56,14 @@ fn do_list_note_folders(vault: &Path) -> Result<Vec<String>> {
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn create_note_folder(vault_path: String, relative_path: String) -> Result<String> {
     do_create_note_folder(Path::new(&vault_path), &relative_path)
         .map(|p| p.to_string_lossy().into_owned())
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn create_note(vault_path: String, relative_path: String) -> Result<String> {
     do_create_note(Path::new(&vault_path), &relative_path).map(|p| p.to_string_lossy().into_owned())
 }

@@ -58,6 +58,7 @@ impl BoardDir {
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn list_boards(vault_path: String) -> Result<Vec<BoardLayout>> {
     let boards_dir = PathBuf::from(&vault_path).join("boards");
     if !boards_dir.is_dir() {
@@ -107,6 +108,7 @@ pub async fn list_boards(vault_path: String) -> Result<Vec<BoardLayout>> {
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn set_board_column_order(
     vault_path: String,
     board_name: String,
@@ -120,6 +122,7 @@ pub async fn set_board_column_order(
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn create_column(
     vault_path: String,
     board_name: String,
@@ -152,6 +155,7 @@ pub async fn create_column(
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn delete_column(
     vault_path: String,
     board_name: String,
@@ -181,6 +185,7 @@ pub async fn delete_column(
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn rename_column(
     vault_path: String,
     board_name: String,
@@ -235,6 +240,7 @@ pub async fn rename_column(
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn create_board(vault_path: String, name: String) -> Result<String> {
     do_create_board(Path::new(&vault_path), &name).map(|p| p.to_string_lossy().into_owned())
 }

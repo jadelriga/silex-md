@@ -85,3 +85,9 @@ jobs:
       - name: cargo test
         working-directory: src-tauri
         run: cargo test --locked
+
+      # `cargo test` re-exports src/lib/bindings.ts via the tauri-specta export
+      # test. If the committed file is stale (someone changed a Rust type or
+      # command without regenerating), this fails — keeping the IPC types honest.
+      - name: Check generated bindings are up to date
+        run: git diff --exit-code src/lib/bindings.ts

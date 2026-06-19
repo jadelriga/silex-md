@@ -13,6 +13,7 @@ use crate::error::{Error, Result};
 use crate::models::VaultEntry;
 
 #[tauri::command]
+#[specta::specta]
 pub async fn read_vault(path: String) -> Result<Vec<VaultEntry>> {
     let vault = PathBuf::from(&path);
     if !vault.is_dir() {
@@ -51,12 +52,14 @@ pub async fn read_vault(path: String) -> Result<Vec<VaultEntry>> {
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn read_entry(vault_path: String, path: String) -> Result<Option<VaultEntry>> {
     let boards_dir = PathBuf::from(&vault_path).join("boards");
     Ok(parse_entry(Path::new(&path), &boards_dir))
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn read_task_body(path: String) -> Result<String> {
     let content = fs::read_to_string(&path)?;
     let parsed = Matter::<YAML>::new().parse(&content);
@@ -64,6 +67,7 @@ pub async fn read_task_body(path: String) -> Result<String> {
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn read_bodies(vault_path: String) -> Result<HashMap<String, String>> {
     let vault = PathBuf::from(&vault_path);
     if !vault.is_dir() {

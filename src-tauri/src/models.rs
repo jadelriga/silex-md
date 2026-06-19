@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 /// "task" | "note" | "reminder"; `board`/`column` are set only for tasks.
 /// Field names cross the IPC boundary as camelCase (see the frontend's
 /// `VaultEntry` interface).
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone, specta::Type)]
 #[serde(rename_all = "camelCase")]
 pub struct VaultEntry {
     pub path: String,
@@ -17,7 +17,7 @@ pub struct VaultEntry {
 }
 
 /// A board and its ordered list of column names.
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone, specta::Type)]
 pub struct BoardLayout {
     pub name: String,
     pub columns: Vec<String>,
@@ -34,7 +34,7 @@ pub struct BoardMeta {
 /// sees a `.md` file change. Serializes to exactly `{ path, hash, kind }` —
 /// the shape the frontend's sync loop (`sync.ts`) expects, with `kind` one of
 /// "created" | "modified" | "removed".
-#[derive(Serialize, Clone)]
+#[derive(Serialize, Deserialize, Clone, specta::Type, tauri_specta::Event)]
 pub struct VaultChange {
     pub path: String,
     pub hash: Option<String>,

@@ -52,3 +52,13 @@ impl Serialize for Error {
 }
 
 pub type Result<T> = std::result::Result<T, Error>;
+
+// For tauri-specta, a command error is just the TS `string` primitive — the
+// Serialize impl above sends it across the wire as a string. `Error` can't
+// *derive* specta::Type because it wraps std::io::Error / serde_json::Error,
+// so the one-method impl is written by hand.
+impl specta::Type for Error {
+    fn inline(_: &mut specta::TypeCollection, _: specta::Generics) -> specta::datatype::DataType {
+        specta::datatype::DataType::Primitive(specta::datatype::PrimitiveType::String)
+    }
+}

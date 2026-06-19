@@ -8,16 +8,9 @@ import { bodies } from "$lib/stores/bodies.svelte";
 import { writeHashes } from "$lib/stores/writeHashes";
 import { vault } from "$lib/stores/vault.svelte";
 import { syncEvents } from "$lib/stores/syncEvents.svelte";
+import type { VaultChange } from "$lib/bindings";
 
-export type VaultChangeKind = "created" | "modified" | "removed";
-
-export interface VaultChangeEvent {
-  path: string;
-  hash: string | null;
-  kind: VaultChangeKind;
-}
-
-export async function handleVaultChange(change: VaultChangeEvent): Promise<void> {
+export async function handleVaultChange(change: VaultChange): Promise<void> {
   const { path, hash, kind } = change;
 
   if (kind === "removed") {
@@ -60,7 +53,7 @@ export async function handleVaultChange(change: VaultChangeEvent): Promise<void>
 }
 
 export function startSync(): Promise<UnlistenFn> {
-  return listen<VaultChangeEvent>("vault:changed", (event) => {
+  return listen<VaultChange>("vault:changed", (event) => {
     handleVaultChange(event.payload);
   });
 }

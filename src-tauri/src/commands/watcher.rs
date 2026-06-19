@@ -26,6 +26,7 @@ impl WatcherState {
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn watch_vault(
     app: AppHandle,
     state: State<'_, WatcherState>,

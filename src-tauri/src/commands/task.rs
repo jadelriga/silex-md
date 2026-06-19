@@ -9,6 +9,7 @@ use crate::error::{Error, Result};
 use crate::util::{hash_bytes, is_invalid_segment, slugify, unique_path, write_atomic, yaml_dq};
 
 #[tauri::command]
+#[specta::specta]
 pub async fn create_task(
     vault_path: String,
     board_name: String,
@@ -76,6 +77,7 @@ fn do_create_task(
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn write_task(path: String, content: String) -> Result<String> {
     let p = PathBuf::from(&path);
     write_atomic(&p, content.as_bytes())?;
@@ -83,6 +85,7 @@ pub async fn write_task(path: String, content: String) -> Result<String> {
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn move_task(from: String, to: String, overwrite: Option<bool>) -> Result<()> {
     let from_p = PathBuf::from(&from);
     let to_p = PathBuf::from(&to);
@@ -108,11 +111,13 @@ pub async fn move_task(from: String, to: String, overwrite: Option<bool>) -> Res
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn delete_task(path: String) -> Result<()> {
     Ok(fs::remove_file(&path)?)
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn delete_path(path: String) -> Result<()> {
     let p = PathBuf::from(&path);
     if !p.exists() {
