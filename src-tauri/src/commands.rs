@@ -151,7 +151,7 @@ fn do_list_note_folders(vault: &Path) -> Result<Vec<String>, String> {
     let attachments_dir = vault.join("attachments");
     let mut out: Vec<String> = Vec::new();
 
-    for entry in WalkDir::new(&vault)
+    for entry in WalkDir::new(vault)
         .follow_links(false)
         .min_depth(1)
         .into_iter()
@@ -168,7 +168,7 @@ fn do_list_note_folders(vault: &Path) -> Result<Vec<String>, String> {
             continue;
         }
         let p = entry.path();
-        if let Ok(rel) = p.strip_prefix(&vault) {
+        if let Ok(rel) = p.strip_prefix(vault) {
             out.push(rel.to_string_lossy().into_owned());
         }
     }
@@ -378,8 +378,7 @@ fn yaml_dq(s: &str) -> String {
     let escaped = s
         .replace('\\', "\\\\")
         .replace('"', "\\\"")
-        .replace('\n', " ")
-        .replace('\r', " ");
+        .replace(['\n', '\r'], " ");
     format!("\"{}\"", escaped)
 }
 

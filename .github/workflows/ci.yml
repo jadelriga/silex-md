@@ -23,7 +23,7 @@ concurrency:
 
 jobs:
   check:
-    name: check (svelte-check + vitest + cargo test)
+    name: check (lint + format + svelte-check + vitest + clippy + cargo test)
     runs-on: ubuntu-22.04
     timeout-minutes: 15
 
@@ -62,11 +62,25 @@ jobs:
       - name: Install npm packages
         run: npm ci
 
+      - name: Prettier (format check)
+        run: npm run format:check
+
+      - name: ESLint
+        run: npm run lint
+
       - name: svelte-check
         run: npm run check
 
       - name: vitest
         run: npm test
+
+      - name: rustfmt (format check)
+        working-directory: src-tauri
+        run: cargo fmt --all -- --check
+
+      - name: Clippy
+        working-directory: src-tauri
+        run: cargo clippy --all-targets -- -D warnings
 
       - name: cargo test
         working-directory: src-tauri
